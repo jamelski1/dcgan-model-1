@@ -2,6 +2,7 @@ import argparse, math
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from models.dcgan_encoder import DCGANDiscEncoder
 
 from data_utils import make_splits, collate_pad, decode_ids, SPECIAL
 
@@ -43,11 +44,29 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     ckpt = torch.load(args.ckpt, map_location=device)
     from models.model import EncoderCNN, DecoderGRU
+    from models.dcgan_encoder import DCGANDiscEncoder
     stoi, itos = ckpt["vocab"]
     V = len(itos)
-    enc = EncoderCNN(feat_dim=ckpt["args"]["feat_dim"]).to(device)
-    dec = DecoderGRU(feat_dim=ckpt["args"]["feat_dim"], vocab_size=V, hid=ckpt["args"]["hid"], emb=ckpt["args"]["emb"]).to(device)
-    enc.load_state_dict(ckpt["enc"]); dec.load_state_dict(ckpt["dec"])
+   # --- modified block for DCGAN encoder checkpoints ---
+    from models.dcgan_encoder import DCGANDiscEncoder
+    
+    args_dict = ckpt.get("args", {})
+    feat_dim = args_dict.get("feat_dim", 256)
+    ndf = args_dict.get("ndf", 64)
+    hid = args_dict.get("hid", 256)
+    emb = args_dict.get("emb", 128)
+    
+    enc = DCGANDiscEncoder(feat_dim=feat_dim, ndf=ndf).to(device)
+    dec = DecoderGRU(feat_dim=feat_dim, vocab_size=V, hid=hid, emb=emb).to(device)
+    
+    # Handle either 'enc' or 'enc_disc' checkpoint keys
+    state_enc = ckpt.get("enc", ckpt.get("enc_disc"))
+    if state_enc is None:
+        raise KeyError("Checkpoint missing both 'enc' and 'enc_disc' keys")
+    
+    enc.load_state_dict(state_enc)
+    dec.load_state_dict(ckpt["dec"])
+    # -----------------------------------------------------
     enc.eval(); dec.eval()
 
     # load test split
