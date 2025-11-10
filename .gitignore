@@ -1,0 +1,2 @@
+#git ignore file so it doesn't upload the large dataset
+data/
