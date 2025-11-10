@@ -1,0 +1,15 @@
+            ┌───────────────────────────────┐
+            │  Step 1: Train DCGAN          │
+            │  - Discriminator learns strong│
+            │    visual features             │
+            └────────────┬──────────────────┘
+                         │  (save weights)
+                         ▼
+            ┌───────────────────────────────┐
+            │  Step 2: Train Captioner      │
+            │  - Replace EncoderCNN with    │
+            │    DCGAN Discriminator trunk  │
+            │  - Freeze or fine-tune it     │
+            │  - Decoder learns to map      │
+            │    those features → captions  │
+            └───────────────────────────────┘
