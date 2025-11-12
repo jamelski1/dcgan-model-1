@@ -1,13 +1,22 @@
-<<<<<<< HEAD
-# CIFAR-100 Image Captioning — Baseline (No Extra Credit)
+# CIFAR-100 Image Captioning with DCGAN Encoder
 
-This is a **minimal, from-scratch baseline** captioning system for CIFAR-100:
-- **Encoder:** small CNN
-- **Decoder:** GRU
-- **Captions:** short template "a photo of a {fine_label}"
+This project implements an image-to-text captioning system for CIFAR-100 with multiple encoder options:
+- **Baseline Encoder:** Simple CNN
+- **DCGAN Discriminator Encoder:** Uses trained DCGAN discriminator features
+- **Spectral Norm DCGAN Encoder:** Uses DCGAN with Spectral Normalization for improved stability
+- **Decoder:** GRU-based sequence decoder
+- **Captions:** Template-based "a photo of a {fine_label}"
 - **Metrics:** BLEU-1, ROUGE-L (approx via LCS), and label-word accuracy
 
-> You can later plug in DCGAN and/or Stable Diffusion, but this repo builds the basic working pipeline first.
+## Project Structure
+
+```
+├── models/             # Neural network architectures
+├── training/           # Training scripts
+├── utils/              # Data utilities and helpers
+├── scripts/            # Evaluation and demo scripts
+└── config/             # Configuration files
+```
 
 ## Setup
 
@@ -18,28 +27,38 @@ pip install -r requirements.txt
 python -m nltk.downloader punkt
 ```
 
-## Train
+## Training
 
+### 1. Train Baseline Captioner
 ```bash
-python train.py --epochs 8 --batch_size 128 --lr 2e-4 --max_len 8
+python training/train_captioner.py --encoder_type cnn --epochs 8 --batch_size 128 --lr 2e-4
 ```
 
-## Evaluate
-
+### 2. Train DCGAN (with Spectral Normalization)
 ```bash
-python eval.py --ckpt runs/best.pt --batch_size 256 --max_len 8
+python training/train_gan.py --use_spectral_norm --epochs 100 --batch_size 128
 ```
 
-## Demo (sample captions)
+### 3. Train Captioner with DCGAN Encoder
+```bash
+python training/train_captioner.py --encoder_type dcgan_sn \
+    --dcgan_ckpt runs_gan_sn/dcgan_sn_ckpt_epoch_100.pt \
+    --epochs 20 --batch_size 128
+```
+
+## Evaluation
 
 ```bash
-python demo.py --ckpt runs/best.pt --num 16 --max_len 8
+python scripts/eval.py --ckpt runs_dcgan_enc/best.pt --batch_size 256 --max_len 8
+```
+
+## Demo (Generate Captions)
+
+```bash
+python scripts/demo.py --ckpt runs_dcgan_enc/best.pt --num 16 --max_len 8 --mode sample
 ```
 
 ## Notes
-- CIFAR-100 is small (32×32). Expect captions to mostly be **class names**.
-- Keep it simple; this baseline gives you a clean scaffold to add DCGAN or SD later.
-=======
-# dcgan-model-1
-First image-to-text attempt
->>>>>>> 1ddbd6dc9f5b97259e63f7726c5bd22cbd649f4f
+- CIFAR-100 images are small (32×32). Captions are primarily class names.
+- Spectral Normalization improves DCGAN training stability.
+- The discriminator's learned features serve as a powerful encoder for captioning.

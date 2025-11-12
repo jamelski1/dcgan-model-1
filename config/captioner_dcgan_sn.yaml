@@ -1,0 +1,24 @@
+# Captioner with DCGAN Spectral Norm encoder
+
+# Model architecture
+encoder_type: dcgan_sn
+feat_dim: 256
+hid: 256
+emb: 128
+ndf: 64
+
+# Training hyperparameters
+epochs: 20
+batch_size: 128
+lr: 0.0002
+max_len: 8
+
+# DCGAN encoder options
+dcgan_ckpt: runs_gan_sn/disc_epoch_100.pt
+freeze_encoder: false
+
+# Data
+data_root: ./data
+
+# Output
+out: runs_dcgan_enc

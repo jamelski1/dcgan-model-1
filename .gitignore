@@ -1,2 +1,51 @@
-#git ignore file so it doesn't upload the large dataset
+# Dataset and data files
 data/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# Training outputs
+runs/
+runs_gan/
+runs_gan_sn/
+runs_dcgan_enc/
+logs/
+
+# Generated images and samples
+*.png
+*.jpg
+*.jpeg
+!demo_dcgan_grid.png
+!demo_grid.png
+
+# Model checkpoints
+*.pt
+*.pth
+*.ckpt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
