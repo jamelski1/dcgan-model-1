@@ -19,6 +19,9 @@ Usage:
 import os
 import sys
 import argparse
+import json
+import logging
+from datetime import datetime
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -32,6 +35,53 @@ from utils.data import make_splits, collate_pad
 from models.encoders import EncoderCNN, DiscriminatorEncoder
 from models.decoders import DecoderGRU
 from models.gan import Discriminator
+
+
+def setup_logging(output_dir: str, use_tensorboard: bool = False):
+    """
+    Setup logging to file and optionally TensorBoard.
+
+    Args:
+        output_dir: Directory to save logs
+        use_tensorboard: If True, also log to TensorBoard
+
+    Returns:
+        Tuple of (logger, tensorboard_writer or None)
+    """
+    logger = logging.getLogger("train_captioner")
+    logger.setLevel(logging.INFO)
+    logger.handlers = []
+
+    # File handler
+    log_file = os.path.join(output_dir, f"train_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.INFO)
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+
+    # Formatter
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+    # TensorBoard
+    writer = None
+    if use_tensorboard:
+        try:
+            from torch.utils.tensorboard import SummaryWriter
+            tb_dir = os.path.join(output_dir, "tensorboard")
+            writer = SummaryWriter(tb_dir)
+            logger.info(f"TensorBoard logging enabled. Run: tensorboard --logdir {tb_dir}")
+        except ImportError:
+            logger.warning("TensorBoard not available. Install with: pip install tensorboard")
+
+    logger.info(f"Logging to {log_file}")
+    return logger, writer
 
 
 def create_encoder(
@@ -123,21 +173,35 @@ def main():
                         help="Root directory for CIFAR-100 data")
     parser.add_argument("--out", type=str, default="runs",
                         help="Output directory for checkpoints")
+    parser.add_argument("--use_tensorboard", action="store_true",
+                        help="Enable TensorBoard logging")
 
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     os.makedirs(args.out, exist_ok=True)
 
+    # Setup logging
+    logger, tb_writer = setup_logging(args.out, args.use_tensorboard)
+
+    # Save hyperparameters
+    config = vars(args).copy()
+    config["device"] = device
+    config["timestamp"] = datetime.now().isoformat()
+
+    with open(os.path.join(args.out, "config.json"), "w") as f:
+        json.dump(config, f, indent=2)
+    logger.info(f"Saved configuration to {os.path.join(args.out, 'config.json')}")
+
     # Load data
-    print("Loading CIFAR-100 dataset...")
+    logger.info("Loading CIFAR-100 dataset...")
     train_set, val_set, test_set, vocab = make_splits(
         max_len=args.max_len,
         data_root=args.data_root
     )
     stoi, itos = vocab
     vocab_size = len(itos)
-    print(f"Vocabulary size: {vocab_size}")
+    logger.info(f"Vocabulary size: {vocab_size}")
 
     train_loader = DataLoader(
         train_set, batch_size=args.batch_size, shuffle=True,
@@ -175,7 +239,7 @@ def main():
 
     # Training loop
     best_val_loss = float("inf")
-    print(f"\nStarting training for {args.epochs} epochs...")
+    logger.info(f"Starting training for {args.epochs} epochs...")
 
     for epoch in range(1, args.epochs + 1):
         # Training phase
@@ -215,7 +279,12 @@ def main():
                 val_loss += loss.item() * images.size(0)
 
         val_loss /= len(val_set)
-        print(f"Epoch {epoch}: Train Loss = {train_loss:.4f}, Val Loss = {val_loss:.4f}")
+        logger.info(f"Epoch {epoch}/{args.epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+
+        # TensorBoard logging
+        if tb_writer is not None:
+            tb_writer.add_scalar("Loss/Train", train_loss, epoch)
+            tb_writer.add_scalar("Loss/Validation", val_loss, epoch)
 
         # Save best checkpoint
         if val_loss < best_val_loss:
@@ -228,9 +297,11 @@ def main():
             }
             ckpt_path = os.path.join(args.out, "best.pt")
             torch.save(checkpoint, ckpt_path)
-            print(f"Saved best checkpoint to {ckpt_path}")
+            logger.info(f"Saved best checkpoint to {ckpt_path}")
 
-    print(f"\nTraining complete! Best validation loss: {best_val_loss:.4f}")
+    logger.info(f"Training complete! Best validation loss: {best_val_loss:.4f}")
+    if tb_writer is not None:
+        tb_writer.close()
 
 
 if __name__ == "__main__":
