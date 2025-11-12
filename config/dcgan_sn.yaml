@@ -1,0 +1,34 @@
+# DCGAN training with Spectral Normalization + Hinge loss
+
+# Model architecture
+z_dim: 128
+ngf: 64
+ndf: 64
+use_spectral_norm: true
+
+# Training hyperparameters (TTUR)
+epochs: 150
+batch_size: 128
+lr_d: 0.0002  # Discriminator learning rate
+lr_g: 0.0001  # Generator learning rate (lower for stability)
+beta1: 0.0    # Set to 0 for stability with Spectral Norm
+beta2: 0.9
+
+# Loss
+use_hinge_loss: true
+
+# Augmentation
+use_diff_augment: true
+noise_std: 0.02
+translation_range: 2
+
+# Super-resolution (optional)
+# sr_root: null
+# p_sr: 0.0
+
+# Data
+data_root: ./data
+
+# Output
+out: runs_gan_sn
+save_interval: 10

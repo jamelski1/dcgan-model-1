@@ -1,0 +1,222 @@
+#!/usr/bin/env python3
+"""
+Evaluation script for image captioning models.
+
+Computes BLEU-1, ROUGE-L, and label-word accuracy metrics.
+
+Usage:
+    python scripts/eval.py --ckpt runs/best.pt --batch_size 256
+"""
+
+import os
+import sys
+import argparse
+import torch
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from utils.data import make_splits, collate_pad, decode_ids
+from models.encoders import EncoderCNN, DiscriminatorEncoder
+from models.decoders import DecoderGRU
+from models.gan import Discriminator
+
+
+def bleu1(ref_tokens: list, hyp_tokens: list) -> float:
+    """
+    Compute BLEU-1 score (unigram precision).
+
+    Args:
+        ref_tokens: Reference tokens
+        hyp_tokens: Hypothesis tokens
+
+    Returns:
+        BLEU-1 score
+    """
+    if not hyp_tokens:
+        return 0.0
+    ref = set(ref_tokens)
+    hit = sum(1 for t in hyp_tokens if t in ref)
+    return hit / max(1, len(hyp_tokens))
+
+
+def lcs(a: list, b: list) -> int:
+    """
+    Compute longest common subsequence length.
+
+    Args:
+        a: First sequence
+        b: Second sequence
+
+    Returns:
+        LCS length
+    """
+    n, m = len(a), len(b)
+    dp = [[0] * (m + 1) for _ in range(n + 1)]
+    for i in range(n):
+        for j in range(m):
+            if a[i] == b[j]:
+                dp[i + 1][j + 1] = dp[i][j] + 1
+            else:
+                dp[i + 1][j + 1] = max(dp[i][j + 1], dp[i + 1][j])
+    return dp[n][m]
+
+
+def rouge_l(ref_tokens: list, hyp_tokens: list) -> float:
+    """
+    Compute ROUGE-L score (F1-measure based on LCS).
+
+    Args:
+        ref_tokens: Reference tokens
+        hyp_tokens: Hypothesis tokens
+
+    Returns:
+        ROUGE-L score
+    """
+    if not ref_tokens or not hyp_tokens:
+        return 0.0
+    L = lcs(ref_tokens, hyp_tokens)
+    prec = L / len(hyp_tokens)
+    rec = L / len(ref_tokens)
+    if prec + rec == 0:
+        return 0.0
+    return (2 * prec * rec) / (prec + rec)
+
+
+def load_model(ckpt_path: str, device: str):
+    """
+    Load model from checkpoint.
+
+    Args:
+        ckpt_path: Path to checkpoint file
+        device: Device to load model on
+
+    Returns:
+        Tuple of (encoder, decoder, vocab, args_dict)
+    """
+    print(f"Loading checkpoint from {ckpt_path}")
+    ckpt = torch.load(ckpt_path, map_location=device)
+
+    stoi, itos = ckpt["vocab"]
+    vocab_size = len(itos)
+    args_dict = ckpt.get("args", {})
+
+    # Extract hyperparameters with defaults
+    feat_dim = args_dict.get("feat_dim", 256)
+    ndf = args_dict.get("ndf", 64)
+    hid = args_dict.get("hid", 256)
+    emb = args_dict.get("emb", 128)
+    encoder_type = args_dict.get("encoder_type", "cnn")
+
+    # Create encoder based on type
+    if encoder_type == "cnn" or "enc" in ckpt:
+        encoder = EncoderCNN(feat_dim=feat_dim).to(device)
+        encoder.load_state_dict(ckpt["enc"])
+        print("Loaded baseline CNN encoder")
+    elif "enc_disc" in ckpt or encoder_type in ("dcgan", "dcgan_sn"):
+        use_spectral_norm = (encoder_type == "dcgan_sn")
+        discriminator = Discriminator(ndf=ndf, use_spectral_norm=use_spectral_norm)
+        encoder = DiscriminatorEncoder(
+            discriminator=discriminator,
+            feat_dim=feat_dim,
+            ndf=ndf
+        ).to(device)
+        enc_state = ckpt.get("enc", ckpt.get("enc_disc"))
+        if enc_state is None:
+            raise KeyError("Checkpoint missing both 'enc' and 'enc_disc' keys")
+        encoder.load_state_dict(enc_state)
+        print(f"Loaded DCGAN encoder ({'SN' if use_spectral_norm else 'BN'})")
+    else:
+        raise ValueError("Cannot determine encoder type from checkpoint")
+
+    # Create decoder
+    decoder = DecoderGRU(
+        feat_dim=feat_dim,
+        vocab_size=vocab_size,
+        hid=hid,
+        emb=emb
+    ).to(device)
+    decoder.load_state_dict(ckpt["dec"])
+
+    encoder.eval()
+    decoder.eval()
+
+    return encoder, decoder, (stoi, itos), args_dict
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Evaluate captioning model")
+    parser.add_argument("--ckpt", type=str, required=True,
+                        help="Path to checkpoint file")
+    parser.add_argument("--batch_size", type=int, default=256,
+                        help="Batch size for evaluation")
+    parser.add_argument("--max_len", type=int, default=8,
+                        help="Maximum caption length")
+    parser.add_argument("--data_root", type=str, default="./data",
+                        help="Root directory for CIFAR-100 data")
+    args = parser.parse_args()
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # Load model
+    encoder, decoder, vocab, args_dict = load_model(args.ckpt, device)
+    stoi, itos = vocab
+
+    # Load test set
+    print("Loading test dataset...")
+    _, _, test_set, _ = make_splits(max_len=args.max_len, data_root=args.data_root)
+    test_set.dataset.stoi, test_set.dataset.itos = stoi, itos
+
+    test_loader = DataLoader(
+        test_set, batch_size=args.batch_size, shuffle=False,
+        num_workers=2, collate_fn=collate_pad
+    )
+
+    # Evaluation metrics
+    bleu1_sum = 0.0
+    rouge_l_sum = 0.0
+    label_correct = 0
+    total = 0
+
+    print("Evaluating...")
+    with torch.no_grad():
+        for images, targets, labels in tqdm(test_loader, desc="Eval"):
+            images, targets = images.to(device), targets.to(device)
+
+            # Generate captions
+            features = encoder(images)
+            generated_ids = decoder.generate(
+                features,
+                stoi["<bos>"],
+                stoi["<eos>"],
+                max_len=args.max_len
+            )
+
+            # Compute metrics for each sample
+            for i in range(images.size(0)):
+                ref = decode_ids(targets[i].tolist(), itos).split()
+                hyp = decode_ids(generated_ids[i].tolist(), itos).split()
+
+                # BLEU-1 and ROUGE-L
+                bleu1_sum += bleu1(ref, hyp)
+                rouge_l_sum += rouge_l(ref, hyp)
+
+                # Label-word accuracy: check if true fine label is in hypothesis
+                true_label = test_set.dataset.fine_names[labels[i].item()]
+                label_correct += (true_label in hyp)
+                total += 1
+
+    # Print results
+    print("\n" + "=" * 60)
+    print("EVALUATION RESULTS")
+    print("=" * 60)
+    print(f"BLEU-1:              {bleu1_sum / total:.4f}")
+    print(f"ROUGE-L:             {rouge_l_sum / total:.4f}")
+    print(f"Label-word accuracy: {label_correct / total:.4f} ({label_correct}/{total})")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
