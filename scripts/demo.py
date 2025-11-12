@@ -57,12 +57,13 @@ def load_model(ckpt_path: str, device: str):
     emb = args_dict.get("emb", 128)
     encoder_type = args_dict.get("encoder_type", "cnn")
 
-    # Create encoder based on type
-    if encoder_type == "cnn" or "enc" in ckpt:
-        encoder = EncoderCNN(feat_dim=feat_dim).to(device)
-        encoder.load_state_dict(ckpt["enc"])
-        print("Loaded baseline CNN encoder")
-    elif "enc_disc" in ckpt or encoder_type in ("dcgan", "dcgan_sn"):
+    # Create encoder based on type and checkpoint keys
+    # First check what keys exist in checkpoint
+    has_enc = "enc" in ckpt
+    has_enc_disc = "enc_disc" in ckpt
+
+    if has_enc_disc or encoder_type in ("dcgan", "dcgan_sn"):
+        # DCGAN encoder (with or without spectral norm)
         use_spectral_norm = (encoder_type == "dcgan_sn")
         discriminator = Discriminator(ndf=ndf, use_spectral_norm=use_spectral_norm)
         encoder = DiscriminatorEncoder(
@@ -70,9 +71,16 @@ def load_model(ckpt_path: str, device: str):
             feat_dim=feat_dim,
             ndf=ndf
         ).to(device)
-        enc_state = ckpt.get("enc", ckpt.get("enc_disc"))
+        enc_state = ckpt.get("enc_disc", ckpt.get("enc"))
+        if enc_state is None:
+            raise KeyError("Checkpoint missing both 'enc' and 'enc_disc' keys")
         encoder.load_state_dict(enc_state)
         print(f"Loaded DCGAN encoder ({'SN' if use_spectral_norm else 'BN'})")
+    elif has_enc or encoder_type == "cnn":
+        # Baseline CNN encoder
+        encoder = EncoderCNN(feat_dim=feat_dim).to(device)
+        encoder.load_state_dict(ckpt["enc"])
+        print("Loaded baseline CNN encoder")
     else:
         raise ValueError("Cannot determine encoder type from checkpoint")
 
