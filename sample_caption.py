@@ -73,6 +73,8 @@ def greedy_caption(enc, dec, img, stoi, itos, max_len, device):
                 continue
         if nxt == eos:
             break
+        if nxt == last_token:
+            continue
         last_token = nxt
         inp = torch.cat([inp, torch.tensor([[nxt]], device=device)], dim=1)
 
