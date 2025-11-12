@@ -127,7 +127,11 @@ def load_model(ckpt_path: str, device: str):
         enc_state = ckpt.get("enc_disc", ckpt.get("enc"))
         if enc_state is None:
             raise KeyError("Checkpoint missing both 'enc' and 'enc_disc' keys")
-        encoder.load_state_dict(enc_state)
+        # Use strict=False for old checkpoints (enc_disc) to handle bias parameter differences
+        strict = not has_enc_disc
+        encoder.load_state_dict(enc_state, strict=strict)
+        if not strict:
+            print("Note: Loaded with strict=False to handle old checkpoint format")
         print(f"Loaded DCGAN encoder ({'SN' if use_spectral_norm else 'BN'})")
     elif has_enc or encoder_type == "cnn":
         # Baseline CNN encoder
