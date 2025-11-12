@@ -64,6 +64,13 @@ def greedy_caption(enc, dec, img, stoi, itos, max_len, device):
         nxt = torch.argmax(probs).item()
 
         outs.append(nxt)
+        # prevent immediate duplicate "a"
+        if len(outs) >= 2:
+            prev_w = itos[outs[-2]]
+            cur_w  = itos[outs[-1]]
+            if prev_w == "a" and cur_w == "a":
+                outs.pop()  # drop the second "a"
+                continue
         if nxt == eos:
             break
         last_token = nxt
