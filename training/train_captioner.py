@@ -378,6 +378,8 @@ def main():
             {'params': decoder.parameters(), 'lr': decoder_lr, 'name': 'decoder'}
         ]
         optimizer = torch.optim.AdamW(param_groups)
+        # Collect all trainable parameters for gradient clipping
+        params = list(encoder.resnet_encoder.parameters()) + list(decoder.parameters())
         logger.info(f"Using separate learning rates: ResNet18={resnet_lr:.2e}, Decoder={decoder_lr:.2e}")
     else:
         # Standard optimizer with single learning rate
