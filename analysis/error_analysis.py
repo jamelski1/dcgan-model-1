@@ -28,7 +28,7 @@ from torch.utils.data import DataLoader
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.data import make_splits, collate_pad, decode_ids
-from models.encoders import EncoderCNN, DiscriminatorEncoder
+from models.encoders import EncoderCNN, DiscriminatorEncoder, ResNet18Encoder, HybridEncoder
 from models.decoders import DecoderGRU
 from models.gan import Discriminator
 from models.attention import SpatialEncoder, AttentionDecoderGRU
@@ -124,13 +124,51 @@ def load_model(ckpt_path: str, device: str):
         encoder = EncoderCNN(feat_dim=feat_dim).to(device)
         encoder.load_state_dict(ckpt["enc"])
         print("Loaded baseline CNN encoder")
+    elif encoder_type == "hybrid":
+        # Hybrid encoder: Frozen DCGAN + ResNet18
+        if not use_attention:
+            raise ValueError("Hybrid encoder requires attention mechanism")
+
+        # Create DCGAN spatial encoder (frozen)
+        discriminator = Discriminator(ndf=ndf, use_spectral_norm=True)
+        dcgan_spatial = SpatialEncoder(
+            encoder=DiscriminatorEncoder(
+                discriminator=discriminator,
+                feat_dim=feat_dim,
+                ndf=ndf,
+                freeze=True
+            ),
+            feat_dim=feat_dim,
+            ndf=ndf
+        )
+
+        # Create ResNet18 encoder
+        resnet_encoder = ResNet18Encoder(out_channels=512, pretrained=False)
+
+        # Combine into hybrid encoder
+        encoder = HybridEncoder(
+            dcgan_encoder=dcgan_spatial,
+            resnet_encoder=resnet_encoder,
+            dcgan_channels=feat_dim,
+            resnet_channels=512
+        ).to(device)
+
+        # Load encoder state
+        enc_state = ckpt.get("enc")
+        if enc_state is None:
+            raise KeyError("Checkpoint missing 'enc' key")
+        encoder.load_state_dict(enc_state, strict=False)
+        print(f"Loaded HybridEncoder (DCGAN {feat_dim}ch + ResNet18 512ch = 768ch)")
     else:
         raise ValueError("Cannot determine encoder type from checkpoint")
+
+    # Determine spatial feature dimension for decoder
+    spatial_feat_dim = 768 if encoder_type == "hybrid" else feat_dim
 
     # Create decoder based on attention flag
     if use_attention:
         decoder = AttentionDecoderGRU(
-            spatial_feat_dim=feat_dim,
+            spatial_feat_dim=spatial_feat_dim,
             vocab_size=vocab_size,
             hid=hid,
             emb=emb,

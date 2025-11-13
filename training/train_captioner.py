@@ -29,6 +29,12 @@ Usage:
         --dcgan_ckpt runs_gan_sn/best_disc.pt --use_attention \
         --epochs 100 --lr_scheduler --patience 5 --early_stopping 15 \
         --warmup_epochs 5 --save_every 10 --out runs_attention_long
+
+    # Hybrid encoder: frozen DCGAN (256ch) + trainable ResNet18 (512ch) = 768ch
+    python training/train_captioner.py --encoder_type hybrid \
+        --dcgan_ckpt runs_gan_sn/best_disc.pt --use_attention \
+        --resnet_lr 1e-4 --decoder_lr 2e-4 --epochs 50 \
+        --lr_scheduler --warmup_epochs 3 --out runs_hybrid
 """
 
 import os
@@ -47,7 +53,7 @@ from typing import Literal
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.data import make_splits, collate_pad
-from models.encoders import EncoderCNN, DiscriminatorEncoder
+from models.encoders import EncoderCNN, DiscriminatorEncoder, ResNet18Encoder, HybridEncoder
 from models.decoders import DecoderGRU
 from models.gan import Discriminator
 from models.attention import SpatialEncoder, AttentionDecoderGRU
@@ -107,18 +113,20 @@ def create_encoder(
     dcgan_ckpt: str = None,
     freeze: bool = False,
     use_attention: bool = False,
+    resnet_pretrained: bool = True,
     device: str = "cuda"
 ) -> nn.Module:
     """
     Factory function to create encoder based on type.
 
     Args:
-        encoder_type: One of 'cnn', 'dcgan', 'dcgan_sn'
+        encoder_type: One of 'cnn', 'dcgan', 'dcgan_sn', 'hybrid'
         feat_dim: Output feature dimension
         ndf: Base discriminator channel width (for DCGAN encoders)
         dcgan_ckpt: Path to pre-trained discriminator checkpoint
         freeze: If True, freeze encoder weights
         use_attention: If True, return spatial features (for attention mechanism)
+        resnet_pretrained: If True, use ImageNet pretrained ResNet18 (for hybrid)
         device: Device to load encoder on
 
     Returns:
@@ -169,6 +177,44 @@ def create_encoder(
             freeze_str = " (frozen)" if freeze else ""
             print(f"Created DCGAN encoder with {'Spectral Norm' if use_spectral_norm else 'BatchNorm'}{freeze_str}")
 
+    elif encoder_type == "hybrid":
+        # Hybrid encoder: Frozen DCGAN (256ch) + Trainable ResNet18 (512ch) = 768ch total
+        if not use_attention:
+            raise ValueError("Hybrid encoder requires --use_attention flag")
+        if not dcgan_ckpt:
+            raise ValueError("Hybrid encoder requires --dcgan_ckpt for frozen DCGAN features")
+
+        # Create frozen DCGAN spatial encoder
+        discriminator = Discriminator(ndf=ndf, use_spectral_norm=True)  # SN is standard for hybrid
+        print(f"Loading frozen DCGAN discriminator from {dcgan_ckpt}")
+        state_dict = torch.load(dcgan_ckpt, map_location=device)
+        discriminator.load_state_dict(state_dict, strict=False)
+
+        dcgan_spatial = SpatialEncoder(
+            encoder=DiscriminatorEncoder(
+                discriminator=discriminator,
+                feat_dim=feat_dim,
+                ndf=ndf,
+                freeze=True  # Always freeze DCGAN in hybrid
+            ),
+            feat_dim=feat_dim,
+            ndf=ndf
+        )
+
+        # Create trainable ResNet18 encoder
+        resnet_encoder = ResNet18Encoder(out_channels=512, pretrained=resnet_pretrained)
+
+        # Combine into hybrid encoder
+        encoder = HybridEncoder(
+            dcgan_encoder=dcgan_spatial,
+            resnet_encoder=resnet_encoder,
+            dcgan_channels=feat_dim,
+            resnet_channels=512
+        )
+        print(f"Created HybridEncoder: frozen DCGAN ({feat_dim}ch) + ResNet18 (512ch) = 768ch")
+        print(f"  ResNet18 pretrained: {resnet_pretrained}")
+        print(f"  Output: (B, 768, 4, 4) spatial features for multi-head attention")
+
     else:
         raise ValueError(f"Unknown encoder type: {encoder_type}")
 
@@ -179,7 +225,7 @@ def main():
     parser = argparse.ArgumentParser(description="Train image-to-text captioner")
     # Model architecture
     parser.add_argument("--encoder_type", type=str, default="cnn",
-                        choices=["cnn", "dcgan", "dcgan_sn"],
+                        choices=["cnn", "dcgan", "dcgan_sn", "hybrid"],
                         help="Type of encoder to use")
     parser.add_argument("--feat_dim", type=int, default=256,
                         help="Encoder output feature dimension")
@@ -204,7 +250,11 @@ def main():
     parser.add_argument("--batch_size", type=int, default=128,
                         help="Batch size")
     parser.add_argument("--lr", type=float, default=2e-4,
-                        help="Learning rate")
+                        help="Learning rate (used for decoder and encoder unless separate rates specified)")
+    parser.add_argument("--resnet_lr", type=float, default=None,
+                        help="Learning rate for ResNet18 encoder (only for hybrid encoder)")
+    parser.add_argument("--decoder_lr", type=float, default=None,
+                        help="Learning rate for decoder (only when using separate rates)")
     parser.add_argument("--max_len", type=int, default=8,
                         help="Maximum caption length")
 
@@ -225,6 +275,12 @@ def main():
                         help="Path to pre-trained discriminator checkpoint")
     parser.add_argument("--freeze_encoder", action="store_true",
                         help="Freeze encoder weights during training")
+
+    # Hybrid encoder options
+    parser.add_argument("--resnet_pretrained", action="store_true", default=True,
+                        help="Use ImageNet pretrained ResNet18 for hybrid encoder (default: True)")
+    parser.add_argument("--no_resnet_pretrained", dest="resnet_pretrained", action="store_false",
+                        help="Do not use pretrained ResNet18 for hybrid encoder")
 
     # Data and output
     parser.add_argument("--data_root", type=str, default="./data",
@@ -280,13 +336,20 @@ def main():
         dcgan_ckpt=args.dcgan_ckpt,
         freeze=args.freeze_encoder,
         use_attention=args.use_attention,
+        resnet_pretrained=args.resnet_pretrained,
         device=device
     ).to(device)
+
+    # Determine spatial feature dimension for attention decoder
+    if args.encoder_type == "hybrid":
+        spatial_feat_dim = 768  # 256 (DCGAN) + 512 (ResNet18)
+    else:
+        spatial_feat_dim = args.feat_dim
 
     # Create decoder based on attention flag
     if args.use_attention:
         decoder = AttentionDecoderGRU(
-            spatial_feat_dim=args.feat_dim,
+            spatial_feat_dim=spatial_feat_dim,
             vocab_size=vocab_size,
             hid=args.hid,
             emb=args.emb,
@@ -304,11 +367,26 @@ def main():
         logger.info("Created standard DecoderGRU")
 
     # Optimizer and loss
-    params = list(decoder.parameters())
-    if not args.freeze_encoder:
-        params += list(encoder.parameters())
+    # For hybrid encoder, use separate learning rates for ResNet18 and decoder
+    if args.encoder_type == "hybrid":
+        # Set default learning rates if not specified
+        resnet_lr = args.resnet_lr if args.resnet_lr is not None else 1e-4
+        decoder_lr = args.decoder_lr if args.decoder_lr is not None else 2e-4
 
-    optimizer = torch.optim.AdamW(params, lr=args.lr)
+        param_groups = [
+            {'params': encoder.resnet_encoder.parameters(), 'lr': resnet_lr, 'name': 'resnet'},
+            {'params': decoder.parameters(), 'lr': decoder_lr, 'name': 'decoder'}
+        ]
+        optimizer = torch.optim.AdamW(param_groups)
+        logger.info(f"Using separate learning rates: ResNet18={resnet_lr:.2e}, Decoder={decoder_lr:.2e}")
+    else:
+        # Standard optimizer with single learning rate
+        params = list(decoder.parameters())
+        if not args.freeze_encoder:
+            params += list(encoder.parameters())
+        optimizer = torch.optim.AdamW(params, lr=args.lr)
+        logger.info(f"Using single learning rate: {args.lr:.2e}")
+
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1, ignore_index=stoi["<pad>"])
 
     # Learning rate scheduler for long training runs
