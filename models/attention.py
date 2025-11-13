@@ -171,7 +171,7 @@ class AttentionDecoderGRU(nn.Module):
         self.fc = nn.Linear(hid, vocab_size)
 
         # Layer norm for stability
-        self.ln_feat = nn.LayerNorm(hid)
+        self.ln_feat = nn.LayerNorm(spatial_feat_dim)
         self.ln_attn = nn.LayerNorm(hid)
 
     def forward(
