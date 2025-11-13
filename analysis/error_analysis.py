@@ -31,6 +31,7 @@ from utils.data import make_splits, collate_pad, decode_ids
 from models.encoders import EncoderCNN, DiscriminatorEncoder
 from models.decoders import DecoderGRU
 from models.gan import Discriminator
+from models.attention import SpatialEncoder, AttentionDecoderGRU
 
 
 # CIFAR-100 superclass mappings
@@ -81,6 +82,9 @@ def load_model(ckpt_path: str, device: str):
     hid = args_dict.get("hid", 256)
     emb = args_dict.get("emb", 128)
     encoder_type = args_dict.get("encoder_type", "cnn")
+    use_attention = args_dict.get("use_attention", False)
+    num_heads = args_dict.get("num_heads", 8)
+    dropout = args_dict.get("dropout", 0.1)
 
     # Create encoder
     has_enc = "enc" in ckpt
@@ -89,28 +93,59 @@ def load_model(ckpt_path: str, device: str):
     if has_enc_disc or encoder_type in ("dcgan", "dcgan_sn"):
         use_spectral_norm = (encoder_type == "dcgan_sn")
         discriminator = Discriminator(ndf=ndf, use_spectral_norm=use_spectral_norm)
-        encoder = DiscriminatorEncoder(
-            discriminator=discriminator,
-            feat_dim=feat_dim,
-            ndf=ndf
-        ).to(device)
+
+        if use_attention:
+            # Spatial encoder for attention mechanism
+            encoder = SpatialEncoder(
+                encoder=DiscriminatorEncoder(
+                    discriminator=discriminator,
+                    feat_dim=feat_dim,
+                    ndf=ndf
+                ),
+                feat_dim=feat_dim,
+                ndf=ndf
+            ).to(device)
+        else:
+            # Standard global pooling encoder
+            encoder = DiscriminatorEncoder(
+                discriminator=discriminator,
+                feat_dim=feat_dim,
+                ndf=ndf
+            ).to(device)
+
         enc_state = ckpt.get("enc_disc", ckpt.get("enc"))
         strict = not has_enc_disc
         encoder.load_state_dict(enc_state, strict=strict)
-        print(f"Loaded DCGAN encoder ({'SN' if use_spectral_norm else 'BN'})")
+        encoder_desc = f"DCGAN {'spatial ' if use_attention else ''}encoder ({'SN' if use_spectral_norm else 'BN'})"
+        print(f"Loaded {encoder_desc}")
     elif has_enc or encoder_type == "cnn":
+        if use_attention:
+            raise ValueError("Attention mechanism not supported with CNN encoder")
         encoder = EncoderCNN(feat_dim=feat_dim).to(device)
         encoder.load_state_dict(ckpt["enc"])
         print("Loaded baseline CNN encoder")
     else:
         raise ValueError("Cannot determine encoder type from checkpoint")
 
-    decoder = DecoderGRU(
-        feat_dim=feat_dim,
-        vocab_size=vocab_size,
-        hid=hid,
-        emb=emb
-    ).to(device)
+    # Create decoder based on attention flag
+    if use_attention:
+        decoder = AttentionDecoderGRU(
+            spatial_feat_dim=feat_dim,
+            vocab_size=vocab_size,
+            hid=hid,
+            emb=emb,
+            num_heads=num_heads,
+            dropout=dropout
+        ).to(device)
+        print(f"Loaded AttentionDecoderGRU with {num_heads} heads")
+    else:
+        decoder = DecoderGRU(
+            feat_dim=feat_dim,
+            vocab_size=vocab_size,
+            hid=hid,
+            emb=emb
+        ).to(device)
+        print("Loaded standard DecoderGRU")
     decoder.load_state_dict(ckpt["dec"])
 
     encoder.eval()
