@@ -25,7 +25,13 @@ runs/
 runs_gan/
 runs_gan_sn/
 runs_dcgan_enc/
+runs_continued/
 logs/
+
+# Analysis outputs (but track the directory structure)
+outputs/analysis/*.png
+outputs/analysis/*.txt
+outputs/analysis/*.json
 
 # Generated images and samples
 *.png
