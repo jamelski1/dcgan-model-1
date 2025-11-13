@@ -7,6 +7,10 @@ Supports multiple encoder types:
 - 'dcgan': DCGAN discriminator encoder (with BatchNorm)
 - 'dcgan_sn': DCGAN discriminator encoder (with Spectral Normalization)
 
+Decoder options:
+- Standard GRU decoder with global pooling (default)
+- Multi-head spatial attention decoder (--use_attention)
+
 Usage:
     # Baseline CNN encoder
     python training/train_captioner.py --encoder_type cnn --epochs 8
@@ -14,6 +18,11 @@ Usage:
     # DCGAN encoder (requires pre-trained discriminator)
     python training/train_captioner.py --encoder_type dcgan_sn \
         --dcgan_ckpt runs_gan_sn/disc_epoch_100.pt --epochs 20
+
+    # DCGAN encoder with multi-head spatial attention
+    python training/train_captioner.py --encoder_type dcgan_sn \
+        --dcgan_ckpt runs_gan_sn/best_disc.pt --use_attention \
+        --num_heads 8 --epochs 40 --out runs_attention
 """
 
 import os
@@ -35,6 +44,7 @@ from utils.data import make_splits, collate_pad
 from models.encoders import EncoderCNN, DiscriminatorEncoder
 from models.decoders import DecoderGRU
 from models.gan import Discriminator
+from models.attention import SpatialEncoder, AttentionDecoderGRU
 
 
 def setup_logging(output_dir: str, use_tensorboard: bool = False):
@@ -90,6 +100,7 @@ def create_encoder(
     ndf: int,
     dcgan_ckpt: str = None,
     freeze: bool = False,
+    use_attention: bool = False,
     device: str = "cuda"
 ) -> nn.Module:
     """
@@ -101,12 +112,15 @@ def create_encoder(
         ndf: Base discriminator channel width (for DCGAN encoders)
         dcgan_ckpt: Path to pre-trained discriminator checkpoint
         freeze: If True, freeze encoder weights
+        use_attention: If True, return spatial features (for attention mechanism)
         device: Device to load encoder on
 
     Returns:
         Encoder module
     """
     if encoder_type == "cnn":
+        if use_attention:
+            raise ValueError("Attention mechanism not supported with CNN encoder. Use 'dcgan' or 'dcgan_sn'.")
         encoder = EncoderCNN(feat_dim=feat_dim)
         print("Created baseline CNN encoder")
 
@@ -122,14 +136,32 @@ def create_encoder(
         else:
             print("WARNING: No DCGAN checkpoint provided. Using random initialization.")
 
-        encoder = DiscriminatorEncoder(
-            discriminator=discriminator,
-            feat_dim=feat_dim,
-            ndf=ndf,
-            freeze=freeze
-        )
-        freeze_str = " (frozen)" if freeze else ""
-        print(f"Created DCGAN encoder with {'Spectral Norm' if use_spectral_norm else 'BatchNorm'}{freeze_str}")
+        # Choose encoder type based on attention flag
+        if use_attention:
+            # SpatialEncoder for attention mechanism (returns 4x4 spatial features)
+            encoder = SpatialEncoder(
+                encoder=DiscriminatorEncoder(
+                    discriminator=discriminator,
+                    feat_dim=feat_dim,
+                    ndf=ndf,
+                    freeze=freeze
+                ),
+                feat_dim=feat_dim,
+                ndf=ndf
+            )
+            freeze_str = " (frozen)" if freeze else ""
+            print(f"Created DCGAN spatial encoder with {'Spectral Norm' if use_spectral_norm else 'BatchNorm'}{freeze_str}")
+            print(f"  Output: (B, {feat_dim}, 4, 4) spatial features for multi-head attention")
+        else:
+            # Standard global pooling encoder
+            encoder = DiscriminatorEncoder(
+                discriminator=discriminator,
+                feat_dim=feat_dim,
+                ndf=ndf,
+                freeze=freeze
+            )
+            freeze_str = " (frozen)" if freeze else ""
+            print(f"Created DCGAN encoder with {'Spectral Norm' if use_spectral_norm else 'BatchNorm'}{freeze_str}")
 
     else:
         raise ValueError(f"Unknown encoder type: {encoder_type}")
@@ -151,6 +183,14 @@ def main():
                         help="Token embedding dimension")
     parser.add_argument("--ndf", type=int, default=64,
                         help="Discriminator base channel width (for DCGAN encoders)")
+
+    # Attention mechanism
+    parser.add_argument("--use_attention", action="store_true",
+                        help="Use multi-head spatial attention decoder")
+    parser.add_argument("--num_heads", type=int, default=8,
+                        help="Number of attention heads (only with --use_attention)")
+    parser.add_argument("--dropout", type=float, default=0.1,
+                        help="Dropout probability for attention (only with --use_attention)")
 
     # Training hyperparameters
     parser.add_argument("--epochs", type=int, default=8,
@@ -221,15 +261,29 @@ def main():
         ndf=args.ndf,
         dcgan_ckpt=args.dcgan_ckpt,
         freeze=args.freeze_encoder,
+        use_attention=args.use_attention,
         device=device
     ).to(device)
 
-    decoder = DecoderGRU(
-        feat_dim=args.feat_dim,
-        vocab_size=vocab_size,
-        hid=args.hid,
-        emb=args.emb
-    ).to(device)
+    # Create decoder based on attention flag
+    if args.use_attention:
+        decoder = AttentionDecoderGRU(
+            spatial_feat_dim=args.feat_dim,
+            vocab_size=vocab_size,
+            hid=args.hid,
+            emb=args.emb,
+            num_heads=args.num_heads,
+            dropout=args.dropout
+        ).to(device)
+        logger.info(f"Created AttentionDecoderGRU with {args.num_heads} heads")
+    else:
+        decoder = DecoderGRU(
+            feat_dim=args.feat_dim,
+            vocab_size=vocab_size,
+            hid=args.hid,
+            emb=args.emb
+        ).to(device)
+        logger.info("Created standard DecoderGRU")
 
     # Optimizer and loss
     params = list(decoder.parameters())
