@@ -9,7 +9,7 @@ each word.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Union
 import math
 
 
@@ -179,18 +179,18 @@ class AttentionDecoderGRU(nn.Module):
         spatial_feats: torch.Tensor,
         tgt_ids: torch.Tensor,
         return_attention: bool = False
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Forward pass with teacher forcing.
 
         Args:
             spatial_feats: Spatial features (B, feat_dim, H, W)
             tgt_ids: Target token IDs (B, T)
-            return_attention: If True, return attention weights
+            return_attention: If True, return tuple (logits, attention_weights)
 
         Returns:
-            logits: (B, T-1, vocab_size)
-            attention_weights: Attention maps if return_attention else None
+            If return_attention=False: logits tensor (B, T-1, vocab_size)
+            If return_attention=True: tuple of (logits, attention_weights)
         """
         B, C, H, W = spatial_feats.shape
 
@@ -242,10 +242,9 @@ class AttentionDecoderGRU(nn.Module):
             attention_weights = torch.stack(all_attention_weights, dim=1)  # (B, T-1, num_heads, 1, H*W)
             # Reshape to (B, T-1, num_heads, H, W) for visualization
             attention_weights = attention_weights.squeeze(3).view(B, T, self.num_heads, H, W)
+            return logits, attention_weights
         else:
-            attention_weights = None
-
-        return logits, attention_weights
+            return logits
 
     @torch.no_grad()
     def generate(
