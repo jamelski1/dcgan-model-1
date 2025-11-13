@@ -175,6 +175,8 @@ def main():
                         help="Output directory for checkpoints")
     parser.add_argument("--use_tensorboard", action="store_true",
                         help="Enable TensorBoard logging")
+    parser.add_argument("--resume", type=str, default=None,
+                        help="Resume training from checkpoint")
 
     args = parser.parse_args()
 
@@ -237,11 +239,39 @@ def main():
     optimizer = torch.optim.AdamW(params, lr=args.lr)
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1, ignore_index=stoi["<pad>"])
 
-    # Training loop
+    # Resume from checkpoint if specified
+    start_epoch = 1
     best_val_loss = float("inf")
-    logger.info(f"Starting training for {args.epochs} epochs...")
 
-    for epoch in range(1, args.epochs + 1):
+    if args.resume:
+        logger.info(f"Resuming training from {args.resume}")
+        resume_ckpt = torch.load(args.resume, map_location=device)
+
+        # Load model states
+        enc_state = resume_ckpt.get("enc", resume_ckpt.get("enc_disc"))
+        encoder.load_state_dict(enc_state, strict=False)
+        decoder.load_state_dict(resume_ckpt["dec"])
+
+        # Load optimizer state if available
+        if "optimizer" in resume_ckpt:
+            optimizer.load_state_dict(resume_ckpt["optimizer"])
+            logger.info("Loaded optimizer state")
+
+        # Get best validation loss and starting epoch
+        if "best_val_loss" in resume_ckpt:
+            best_val_loss = resume_ckpt["best_val_loss"]
+            logger.info(f"Previous best validation loss: {best_val_loss:.4f}")
+
+        if "epoch" in resume_ckpt:
+            start_epoch = resume_ckpt["epoch"] + 1
+            logger.info(f"Resuming from epoch {start_epoch}")
+
+        logger.info("Successfully resumed from checkpoint")
+
+    # Training loop
+    logger.info(f"Training for {args.epochs} epochs (starting from epoch {start_epoch})...")
+
+    for epoch in range(start_epoch, start_epoch + args.epochs):
         # Training phase
         encoder.train()
         decoder.train()
@@ -279,7 +309,8 @@ def main():
                 val_loss += loss.item() * images.size(0)
 
         val_loss /= len(val_set)
-        logger.info(f"Epoch {epoch}/{args.epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+        total_epochs = start_epoch + args.epochs - 1
+        logger.info(f"Epoch {epoch}/{total_epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
 
         # TensorBoard logging
         if tb_writer is not None:
@@ -292,6 +323,9 @@ def main():
             checkpoint = {
                 "enc": encoder.state_dict(),  # Standardized key name
                 "dec": decoder.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "epoch": epoch,
+                "best_val_loss": best_val_loss,
                 "vocab": vocab,
                 "args": vars(args)
             }
