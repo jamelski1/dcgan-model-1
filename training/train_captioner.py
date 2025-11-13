@@ -315,8 +315,7 @@ def main():
     scheduler = None
     if args.lr_scheduler:
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode='min', factor=0.5, patience=args.patience,
-            verbose=True, min_lr=1e-6
+            optimizer, mode='min', factor=0.5, patience=args.patience, min_lr=1e-6
         )
         logger.info(f"Enabled ReduceLROnPlateau scheduler (patience={args.patience}, factor=0.5)")
 
