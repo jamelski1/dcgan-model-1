@@ -450,7 +450,7 @@ def main():
 
             ckpt_path = os.path.join(args.out, "best.pt")
             torch.save(checkpoint, ckpt_path)
-            logger.info(f"✓ Saved best checkpoint to {ckpt_path} (new best: {best_val_loss:.4f})")
+            logger.info(f"[BEST] Saved best checkpoint to {ckpt_path} (new best: {best_val_loss:.4f})")
 
         # Periodic checkpoints
         if args.save_every and epoch % args.save_every == 0:

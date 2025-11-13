@@ -254,7 +254,7 @@ class AttentionDecoderGRU(nn.Module):
         eos_id: int,
         max_len: int = 8,
         return_attention: bool = False
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Greedy autoregressive generation with attention.
 
@@ -263,11 +263,11 @@ class AttentionDecoderGRU(nn.Module):
             bos_id: Beginning-of-sequence token ID
             eos_id: End-of-sequence token ID
             max_len: Maximum sequence length
-            return_attention: If True, return attention weights
+            return_attention: If True, return tuple (generated_ids, attention_weights)
 
         Returns:
-            generated_ids: (B, max_len-1)
-            attention_weights: (B, max_len-1, num_heads, H, W) if return_attention else None
+            If return_attention=False: generated_ids tensor (B, max_len-1)
+            If return_attention=True: tuple of (generated_ids, attention_weights)
         """
         B, C, H, W = spatial_feats.shape
         device = spatial_feats.device
@@ -315,7 +315,6 @@ class AttentionDecoderGRU(nn.Module):
             attention_weights = torch.stack(all_attention_weights, dim=1)  # (B, max_len-1, num_heads, H*W)
             # Reshape to (B, max_len-1, num_heads, H, W)
             attention_weights = attention_weights.view(B, max_len - 1, self.num_heads, H, W)
+            return generated_ids, attention_weights
         else:
-            attention_weights = None
-
-        return generated_ids, attention_weights
+            return generated_ids
