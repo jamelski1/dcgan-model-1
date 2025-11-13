@@ -161,6 +161,9 @@ class AttentionDecoderGRU(nn.Module):
         # Initial state from spatial features (use mean pooling)
         self.init_h = nn.Linear(spatial_feat_dim, hid)
 
+        # Project spatial features to hidden dimension for attention
+        self.feat_proj = nn.Linear(spatial_feat_dim, hid)
+
         # Multi-head attention
         self.attention = MultiHeadAttention(hid, num_heads, dropout)
 
@@ -198,6 +201,9 @@ class AttentionDecoderGRU(nn.Module):
         spatial_seq = spatial_feats.view(B, C, H * W).permute(0, 2, 1)  # (B, H*W, C)
         spatial_seq = self.ln_feat(spatial_seq)
 
+        # Project spatial features to hidden dimension
+        spatial_seq_proj = self.feat_proj(spatial_seq)  # (B, H*W, hid)
+
         # Initialize hidden state from mean-pooled spatial features
         h0 = torch.tanh(self.init_h(spatial_seq.mean(dim=1))).unsqueeze(0)  # (1, B, hid)
 
@@ -226,7 +232,7 @@ class AttentionDecoderGRU(nn.Module):
 
             # Use current hidden state to attend to spatial features
             query = h[-1].unsqueeze(1)  # (B, 1, hid)
-            context, attn = self.attention(query, spatial_seq, spatial_seq, return_attention=return_attention)
+            context, attn = self.attention(query, spatial_seq_proj, spatial_seq_proj, return_attention=return_attention)
             context = self.ln_attn(context)  # (B, 1, hid)
 
             # Predict next token from current hidden state
@@ -276,6 +282,9 @@ class AttentionDecoderGRU(nn.Module):
         spatial_seq = spatial_feats.view(B, C, H * W).permute(0, 2, 1)
         spatial_seq = self.ln_feat(spatial_seq)
 
+        # Project spatial features to hidden dimension
+        spatial_seq_proj = self.feat_proj(spatial_seq)  # (B, H*W, hid)
+
         # Initialize hidden state
         h = torch.tanh(self.init_h(spatial_seq.mean(dim=1))).unsqueeze(0)
 
@@ -296,7 +305,7 @@ class AttentionDecoderGRU(nn.Module):
 
             # Attend to spatial features
             query = h[-1].unsqueeze(1)
-            context, attn = self.attention(query, spatial_seq, spatial_seq, return_attention=return_attention)
+            context, attn = self.attention(query, spatial_seq_proj, spatial_seq_proj, return_attention=return_attention)
             context = self.ln_attn(context)
 
             # Predict next token
