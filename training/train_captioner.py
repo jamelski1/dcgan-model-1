@@ -23,6 +23,12 @@ Usage:
     python training/train_captioner.py --encoder_type dcgan_sn \
         --dcgan_ckpt runs_gan_sn/best_disc.pt --use_attention \
         --num_heads 8 --epochs 40 --out runs_attention
+
+    # Long overnight training with all optimizations
+    python training/train_captioner.py --encoder_type dcgan_sn \
+        --dcgan_ckpt runs_gan_sn/best_disc.pt --use_attention \
+        --epochs 100 --lr_scheduler --patience 5 --early_stopping 15 \
+        --warmup_epochs 5 --save_every 10 --out runs_attention_long
 """
 
 import os
@@ -202,6 +208,18 @@ def main():
     parser.add_argument("--max_len", type=int, default=8,
                         help="Maximum caption length")
 
+    # Long training optimizations
+    parser.add_argument("--lr_scheduler", action="store_true",
+                        help="Use ReduceLROnPlateau scheduler for long training runs")
+    parser.add_argument("--patience", type=int, default=5,
+                        help="Epochs to wait before reducing LR (with --lr_scheduler)")
+    parser.add_argument("--early_stopping", type=int, default=None,
+                        help="Stop training if no improvement for N epochs (disabled by default)")
+    parser.add_argument("--warmup_epochs", type=int, default=0,
+                        help="Number of warmup epochs (recommended: 3-5 for attention models)")
+    parser.add_argument("--save_every", type=int, default=None,
+                        help="Save checkpoint every N epochs (in addition to best)")
+
     # DCGAN-specific options
     parser.add_argument("--dcgan_ckpt", type=str, default=None,
                         help="Path to pre-trained discriminator checkpoint")
@@ -293,9 +311,19 @@ def main():
     optimizer = torch.optim.AdamW(params, lr=args.lr)
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1, ignore_index=stoi["<pad>"])
 
+    # Learning rate scheduler for long training runs
+    scheduler = None
+    if args.lr_scheduler:
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode='min', factor=0.5, patience=args.patience,
+            verbose=True, min_lr=1e-6
+        )
+        logger.info(f"Enabled ReduceLROnPlateau scheduler (patience={args.patience}, factor=0.5)")
+
     # Resume from checkpoint if specified
     start_epoch = 1
     best_val_loss = float("inf")
+    epochs_without_improvement = 0
 
     if args.resume:
         logger.info(f"Resuming training from {args.resume}")
@@ -311,6 +339,11 @@ def main():
             optimizer.load_state_dict(resume_ckpt["optimizer"])
             logger.info("Loaded optimizer state")
 
+        # Load scheduler state if available
+        if scheduler is not None and "scheduler" in resume_ckpt:
+            scheduler.load_state_dict(resume_ckpt["scheduler"])
+            logger.info("Loaded scheduler state")
+
         # Get best validation loss and starting epoch
         if "best_val_loss" in resume_ckpt:
             best_val_loss = resume_ckpt["best_val_loss"]
@@ -320,12 +353,28 @@ def main():
             start_epoch = resume_ckpt["epoch"] + 1
             logger.info(f"Resuming from epoch {start_epoch}")
 
+        if "epochs_without_improvement" in resume_ckpt:
+            epochs_without_improvement = resume_ckpt["epochs_without_improvement"]
+
         logger.info("Successfully resumed from checkpoint")
 
     # Training loop
     logger.info(f"Training for {args.epochs} epochs (starting from epoch {start_epoch})...")
+    if args.warmup_epochs > 0:
+        logger.info(f"Using {args.warmup_epochs} warmup epochs")
+    if args.early_stopping:
+        logger.info(f"Early stopping enabled (patience={args.early_stopping} epochs)")
 
     for epoch in range(start_epoch, start_epoch + args.epochs):
+        # Learning rate warmup
+        if args.warmup_epochs > 0 and epoch <= args.warmup_epochs:
+            warmup_lr = args.lr * (epoch / args.warmup_epochs)
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = warmup_lr
+            current_lr = warmup_lr
+        else:
+            current_lr = optimizer.param_groups[0]['lr']
+
         # Training phase
         encoder.train()
         decoder.train()
@@ -345,7 +394,7 @@ def main():
             optimizer.step()
 
             train_loss += loss.item() * images.size(0)
-            pbar.set_postfix(loss=f"{loss.item():.3f}")
+            pbar.set_postfix(loss=f"{loss.item():.3f}", lr=f"{current_lr:.2e}")
 
         train_loss /= len(train_set)
 
@@ -364,28 +413,70 @@ def main():
 
         val_loss /= len(val_set)
         total_epochs = start_epoch + args.epochs - 1
-        logger.info(f"Epoch {epoch}/{total_epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+        logger.info(f"Epoch {epoch}/{total_epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, LR: {current_lr:.2e}")
+
+        # Learning rate scheduling
+        if scheduler is not None and epoch > args.warmup_epochs:
+            scheduler.step(val_loss)
 
         # TensorBoard logging
         if tb_writer is not None:
             tb_writer.add_scalar("Loss/Train", train_loss, epoch)
             tb_writer.add_scalar("Loss/Validation", val_loss, epoch)
+            tb_writer.add_scalar("Learning_Rate", current_lr, epoch)
 
-        # Save best checkpoint
+        # Track improvement for early stopping
+        improved = False
         if val_loss < best_val_loss:
             best_val_loss = val_loss
+            epochs_without_improvement = 0
+            improved = True
+        else:
+            epochs_without_improvement += 1
+
+        # Save best checkpoint
+        if improved:
             checkpoint = {
                 "enc": encoder.state_dict(),  # Standardized key name
                 "dec": decoder.state_dict(),
                 "optimizer": optimizer.state_dict(),
                 "epoch": epoch,
                 "best_val_loss": best_val_loss,
+                "epochs_without_improvement": epochs_without_improvement,
                 "vocab": vocab,
                 "args": vars(args)
             }
+            if scheduler is not None:
+                checkpoint["scheduler"] = scheduler.state_dict()
+
             ckpt_path = os.path.join(args.out, "best.pt")
             torch.save(checkpoint, ckpt_path)
-            logger.info(f"Saved best checkpoint to {ckpt_path}")
+            logger.info(f"✓ Saved best checkpoint to {ckpt_path} (new best: {best_val_loss:.4f})")
+
+        # Periodic checkpoints
+        if args.save_every and epoch % args.save_every == 0:
+            checkpoint = {
+                "enc": encoder.state_dict(),
+                "dec": decoder.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "epoch": epoch,
+                "best_val_loss": best_val_loss,
+                "epochs_without_improvement": epochs_without_improvement,
+                "vocab": vocab,
+                "args": vars(args)
+            }
+            if scheduler is not None:
+                checkpoint["scheduler"] = scheduler.state_dict()
+
+            periodic_path = os.path.join(args.out, f"checkpoint_epoch_{epoch}.pt")
+            torch.save(checkpoint, periodic_path)
+            logger.info(f"Saved periodic checkpoint to {periodic_path}")
+
+        # Early stopping check
+        if args.early_stopping and epochs_without_improvement >= args.early_stopping:
+            logger.info(f"Early stopping triggered! No improvement for {epochs_without_improvement} epochs.")
+            logger.info(f"Best validation loss: {best_val_loss:.4f}")
+            break
 
     logger.info(f"Training complete! Best validation loss: {best_val_loss:.4f}")
     if tb_writer is not None:
