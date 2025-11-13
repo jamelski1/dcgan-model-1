@@ -1,0 +1,5 @@
+2025-11-11 21:25:17,307 - INFO - Logging to runs_gan_snn\train_20251111_212517.log
+2025-11-11 21:25:17,312 - INFO - Saved configuration to runs_gan_snn\config.json
+2025-11-11 21:25:17,313 - INFO - Using Spectral Normalization mode with TTUR
+2025-11-11 21:25:17,911 - INFO - Using Hinge Loss
+2025-11-11 21:25:17,916 - INFO - Starting training for 150 epochs...

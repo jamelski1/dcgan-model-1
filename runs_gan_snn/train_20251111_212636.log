@@ -1,0 +1,171 @@
+2025-11-11 21:26:36,887 - INFO - Logging to runs_gan_snn\train_20251111_212636.log
+2025-11-11 21:26:36,915 - INFO - Saved configuration to runs_gan_snn\config.json
+2025-11-11 21:26:36,915 - INFO - Using Spectral Normalization mode with TTUR
+2025-11-11 21:26:37,567 - INFO - Using Hinge Loss
+2025-11-11 21:26:37,567 - INFO - Starting training for 150 epochs...
+2025-11-11 21:29:53,817 - INFO - Epoch 1/150 - Loss D: 0.8014, Loss G: 1.0190
+2025-11-11 21:33:08,861 - INFO - Epoch 2/150 - Loss D: 1.4860, Loss G: 0.2983
+2025-11-11 21:36:23,040 - INFO - Epoch 3/150 - Loss D: 1.2229, Loss G: 0.4810
+2025-11-11 21:39:37,675 - INFO - Epoch 4/150 - Loss D: 1.3130, Loss G: 0.3981
+2025-11-11 21:42:49,793 - INFO - Epoch 5/150 - Loss D: 1.4216, Loss G: 0.3372
+2025-11-11 21:46:01,451 - INFO - Epoch 6/150 - Loss D: 1.4687, Loss G: 0.3053
+2025-11-11 21:49:12,694 - INFO - Epoch 7/150 - Loss D: 1.4975, Loss G: 0.2597
+2025-11-11 21:52:26,111 - INFO - Epoch 8/150 - Loss D: 1.5256, Loss G: 0.2398
+2025-11-11 21:55:37,464 - INFO - Epoch 9/150 - Loss D: 1.5829, Loss G: 0.2148
+2025-11-11 21:58:49,937 - INFO - Epoch 10/150 - Loss D: 1.6451, Loss G: 0.1992
+2025-11-11 21:58:50,080 - INFO - Saved checkpoints and samples at epoch 10
+2025-11-11 22:02:01,684 - INFO - Epoch 11/150 - Loss D: 1.6841, Loss G: 0.1909
+2025-11-11 22:05:14,094 - INFO - Epoch 12/150 - Loss D: 1.7106, Loss G: 0.1762
+2025-11-11 22:08:26,132 - INFO - Epoch 13/150 - Loss D: 1.7210, Loss G: 0.1643
+2025-11-11 22:11:38,397 - INFO - Epoch 14/150 - Loss D: 1.7298, Loss G: 0.1496
+2025-11-11 22:14:51,195 - INFO - Epoch 15/150 - Loss D: 1.7521, Loss G: 0.1312
+2025-11-11 22:18:02,973 - INFO - Epoch 16/150 - Loss D: 1.7536, Loss G: 0.1274
+2025-11-11 22:21:14,840 - INFO - Epoch 17/150 - Loss D: 1.7577, Loss G: 0.1300
+2025-11-11 22:24:26,691 - INFO - Epoch 18/150 - Loss D: 1.7615, Loss G: 0.1116
+2025-11-11 22:27:38,711 - INFO - Epoch 19/150 - Loss D: 1.7710, Loss G: 0.0981
+2025-11-11 22:30:51,138 - INFO - Epoch 20/150 - Loss D: 1.7695, Loss G: 0.0917
+2025-11-11 22:30:51,275 - INFO - Saved checkpoints and samples at epoch 20
+2025-11-11 22:34:02,780 - INFO - Epoch 21/150 - Loss D: 1.7767, Loss G: 0.0931
+2025-11-11 22:37:14,489 - INFO - Epoch 22/150 - Loss D: 1.7752, Loss G: 0.0986
+2025-11-11 22:40:26,285 - INFO - Epoch 23/150 - Loss D: 1.7598, Loss G: 0.1254
+2025-11-11 22:43:38,064 - INFO - Epoch 24/150 - Loss D: 1.7543, Loss G: 0.1306
+2025-11-11 22:46:49,431 - INFO - Epoch 25/150 - Loss D: 1.7736, Loss G: 0.1058
+2025-11-11 22:50:01,132 - INFO - Epoch 26/150 - Loss D: 1.7716, Loss G: 0.1020
+2025-11-11 22:53:12,759 - INFO - Epoch 27/150 - Loss D: 1.7734, Loss G: 0.1237
+2025-11-11 22:56:24,532 - INFO - Epoch 28/150 - Loss D: 1.7904, Loss G: 0.0944
+2025-11-11 22:59:36,326 - INFO - Epoch 29/150 - Loss D: 1.7687, Loss G: 0.1261
+2025-11-11 23:02:47,846 - INFO - Epoch 30/150 - Loss D: 1.7960, Loss G: 0.1003
+2025-11-11 23:02:47,972 - INFO - Saved checkpoints and samples at epoch 30
+2025-11-11 23:05:59,891 - INFO - Epoch 31/150 - Loss D: 1.7993, Loss G: 0.0883
+2025-11-11 23:09:11,453 - INFO - Epoch 32/150 - Loss D: 1.8044, Loss G: 0.0985
+2025-11-11 23:12:23,010 - INFO - Epoch 33/150 - Loss D: 1.7896, Loss G: 0.1187
+2025-11-11 23:15:35,013 - INFO - Epoch 34/150 - Loss D: 1.8017, Loss G: 0.1200
+2025-11-11 23:18:46,465 - INFO - Epoch 35/150 - Loss D: 1.8140, Loss G: 0.1028
+2025-11-11 23:21:57,766 - INFO - Epoch 36/150 - Loss D: 1.8128, Loss G: 0.0946
+2025-11-11 23:25:09,218 - INFO - Epoch 37/150 - Loss D: 1.8072, Loss G: 0.1211
+2025-11-11 23:28:20,925 - INFO - Epoch 38/150 - Loss D: 1.7959, Loss G: 0.1591
+2025-11-11 23:31:32,566 - INFO - Epoch 39/150 - Loss D: 1.7967, Loss G: 0.1552
+2025-11-11 23:34:43,858 - INFO - Epoch 40/150 - Loss D: 1.8040, Loss G: 0.1485
+2025-11-11 23:34:43,974 - INFO - Saved checkpoints and samples at epoch 40
+2025-11-11 23:37:55,719 - INFO - Epoch 41/150 - Loss D: 1.8055, Loss G: 0.1466
+2025-11-11 23:41:07,577 - INFO - Epoch 42/150 - Loss D: 1.8020, Loss G: 0.1598
+2025-11-11 23:44:19,213 - INFO - Epoch 43/150 - Loss D: 1.8071, Loss G: 0.1494
+2025-11-11 23:47:30,939 - INFO - Epoch 44/150 - Loss D: 1.8115, Loss G: 0.1521
+2025-11-11 23:50:42,566 - INFO - Epoch 45/150 - Loss D: 1.8113, Loss G: 0.1437
+2025-11-11 23:53:54,470 - INFO - Epoch 46/150 - Loss D: 1.8224, Loss G: 0.1419
+2025-11-11 23:57:06,519 - INFO - Epoch 47/150 - Loss D: 1.8219, Loss G: 0.1380
+2025-11-12 00:00:18,764 - INFO - Epoch 48/150 - Loss D: 1.8138, Loss G: 0.1568
+2025-11-12 00:03:30,653 - INFO - Epoch 49/150 - Loss D: 1.8173, Loss G: 0.1526
+2025-11-12 00:06:42,654 - INFO - Epoch 50/150 - Loss D: 1.8214, Loss G: 0.1501
+2025-11-12 00:06:42,777 - INFO - Saved checkpoints and samples at epoch 50
+2025-11-12 00:09:54,882 - INFO - Epoch 51/150 - Loss D: 1.8176, Loss G: 0.1501
+2025-11-12 00:13:10,006 - INFO - Epoch 52/150 - Loss D: 1.8230, Loss G: 0.1534
+2025-11-12 00:16:25,781 - INFO - Epoch 53/150 - Loss D: 1.8276, Loss G: 0.1546
+2025-11-12 00:19:38,133 - INFO - Epoch 54/150 - Loss D: 1.8247, Loss G: 0.1512
+2025-11-12 00:22:49,956 - INFO - Epoch 55/150 - Loss D: 1.8327, Loss G: 0.1529
+2025-11-12 00:26:01,956 - INFO - Epoch 56/150 - Loss D: 1.8298, Loss G: 0.1467
+2025-11-12 00:29:13,643 - INFO - Epoch 57/150 - Loss D: 1.8382, Loss G: 0.1430
+2025-11-12 00:32:25,858 - INFO - Epoch 58/150 - Loss D: 1.8341, Loss G: 0.1461
+2025-11-12 00:35:37,931 - INFO - Epoch 59/150 - Loss D: 1.8380, Loss G: 0.1526
+2025-11-12 00:38:49,323 - INFO - Epoch 60/150 - Loss D: 1.8388, Loss G: 0.1456
+2025-11-12 00:38:49,427 - INFO - Saved checkpoints and samples at epoch 60
+2025-11-12 00:42:01,440 - INFO - Epoch 61/150 - Loss D: 1.8437, Loss G: 0.1476
+2025-11-12 00:45:13,631 - INFO - Epoch 62/150 - Loss D: 1.8449, Loss G: 0.1449
+2025-11-12 00:48:25,028 - INFO - Epoch 63/150 - Loss D: 1.8422, Loss G: 0.1489
+2025-11-12 00:51:36,217 - INFO - Epoch 64/150 - Loss D: 1.8432, Loss G: 0.1522
+2025-11-12 00:54:21,859 - INFO - Epoch 65/150 - Loss D: 1.8437, Loss G: 0.1362
+2025-11-12 00:56:34,328 - INFO - Epoch 66/150 - Loss D: 1.8556, Loss G: 0.1383
+2025-11-12 00:59:27,943 - INFO - Epoch 67/150 - Loss D: 1.8486, Loss G: 0.1477
+2025-11-12 01:02:40,303 - INFO - Epoch 68/150 - Loss D: 1.8492, Loss G: 0.1424
+2025-11-12 01:05:52,405 - INFO - Epoch 69/150 - Loss D: 1.8533, Loss G: 0.1454
+2025-11-12 01:09:05,204 - INFO - Epoch 70/150 - Loss D: 1.8595, Loss G: 0.1375
+2025-11-12 01:09:05,308 - INFO - Saved checkpoints and samples at epoch 70
+2025-11-12 01:12:17,221 - INFO - Epoch 71/150 - Loss D: 1.8569, Loss G: 0.1415
+2025-11-12 01:15:29,468 - INFO - Epoch 72/150 - Loss D: 1.8568, Loss G: 0.1409
+2025-11-12 01:18:51,782 - INFO - Epoch 73/150 - Loss D: 1.8564, Loss G: 0.1436
+2025-11-12 01:22:12,709 - INFO - Epoch 74/150 - Loss D: 1.8603, Loss G: 0.1370
+2025-11-12 01:25:33,913 - INFO - Epoch 75/150 - Loss D: 1.8601, Loss G: 0.1367
+2025-11-12 01:28:54,842 - INFO - Epoch 76/150 - Loss D: 1.8625, Loss G: 0.1377
+2025-11-12 01:32:16,304 - INFO - Epoch 77/150 - Loss D: 1.8609, Loss G: 0.1425
+2025-11-12 01:35:36,902 - INFO - Epoch 78/150 - Loss D: 1.8672, Loss G: 0.1358
+2025-11-12 01:38:58,240 - INFO - Epoch 79/150 - Loss D: 1.8654, Loss G: 0.1384
+2025-11-12 01:42:19,300 - INFO - Epoch 80/150 - Loss D: 1.8646, Loss G: 0.1417
+2025-11-12 01:42:19,410 - INFO - Saved checkpoints and samples at epoch 80
+2025-11-12 01:45:40,893 - INFO - Epoch 81/150 - Loss D: 1.8683, Loss G: 0.1307
+2025-11-12 01:49:01,411 - INFO - Epoch 82/150 - Loss D: 1.8693, Loss G: 0.1340
+2025-11-12 01:52:23,020 - INFO - Epoch 83/150 - Loss D: 1.8718, Loss G: 0.1322
+2025-11-12 01:55:43,690 - INFO - Epoch 84/150 - Loss D: 1.8706, Loss G: 0.1409
+2025-11-12 01:59:05,217 - INFO - Epoch 85/150 - Loss D: 1.8725, Loss G: 0.1326
+2025-11-12 02:02:26,254 - INFO - Epoch 86/150 - Loss D: 1.8728, Loss G: 0.1322
+2025-11-12 02:05:47,173 - INFO - Epoch 87/150 - Loss D: 1.8764, Loss G: 0.1303
+2025-11-12 02:09:08,432 - INFO - Epoch 88/150 - Loss D: 1.8720, Loss G: 0.1303
+2025-11-12 02:12:29,468 - INFO - Epoch 89/150 - Loss D: 1.8759, Loss G: 0.1318
+2025-11-12 02:15:50,284 - INFO - Epoch 90/150 - Loss D: 1.8749, Loss G: 0.1352
+2025-11-12 02:15:50,389 - INFO - Saved checkpoints and samples at epoch 90
+2025-11-12 02:19:11,764 - INFO - Epoch 91/150 - Loss D: 1.8760, Loss G: 0.1323
+2025-11-12 02:22:29,570 - INFO - Epoch 92/150 - Loss D: 1.8787, Loss G: 0.1363
+2025-11-12 02:25:50,760 - INFO - Epoch 93/150 - Loss D: 1.8811, Loss G: 0.1238
+2025-11-12 02:29:12,293 - INFO - Epoch 94/150 - Loss D: 1.8809, Loss G: 0.1293
+2025-11-12 02:32:33,264 - INFO - Epoch 95/150 - Loss D: 1.8744, Loss G: 0.1288
+2025-11-12 02:35:54,196 - INFO - Epoch 96/150 - Loss D: 1.8805, Loss G: 0.1333
+2025-11-12 02:39:12,605 - INFO - Epoch 97/150 - Loss D: 1.8819, Loss G: 0.1261
+2025-11-12 02:42:32,720 - INFO - Epoch 98/150 - Loss D: 1.8802, Loss G: 0.1199
+2025-11-12 02:45:50,677 - INFO - Epoch 99/150 - Loss D: 1.8781, Loss G: 0.1367
+2025-11-12 02:49:10,309 - INFO - Epoch 100/150 - Loss D: 1.8850, Loss G: 0.1219
+2025-11-12 02:49:10,414 - INFO - Saved checkpoints and samples at epoch 100
+2025-11-12 02:52:29,636 - INFO - Epoch 101/150 - Loss D: 1.8857, Loss G: 0.1257
+2025-11-12 02:55:48,463 - INFO - Epoch 102/150 - Loss D: 1.8840, Loss G: 0.1249
+2025-11-12 02:59:07,522 - INFO - Epoch 103/150 - Loss D: 1.8826, Loss G: 0.1274
+2025-11-12 03:02:26,382 - INFO - Epoch 104/150 - Loss D: 1.8882, Loss G: 0.1213
+2025-11-12 03:05:45,068 - INFO - Epoch 105/150 - Loss D: 1.8830, Loss G: 0.1320
+2025-11-12 03:09:03,898 - INFO - Epoch 106/150 - Loss D: 1.8896, Loss G: 0.1241
+2025-11-12 03:12:22,695 - INFO - Epoch 107/150 - Loss D: 1.8851, Loss G: 0.1277
+2025-11-12 03:15:41,710 - INFO - Epoch 108/150 - Loss D: 1.8890, Loss G: 0.1273
+2025-11-12 03:19:00,833 - INFO - Epoch 109/150 - Loss D: 1.8891, Loss G: 0.1225
+2025-11-12 03:22:19,892 - INFO - Epoch 110/150 - Loss D: 1.8865, Loss G: 0.1249
+2025-11-12 03:22:20,016 - INFO - Saved checkpoints and samples at epoch 110
+2025-11-12 03:25:39,144 - INFO - Epoch 111/150 - Loss D: 1.8908, Loss G: 0.1149
+2025-11-12 03:28:59,049 - INFO - Epoch 112/150 - Loss D: 1.8888, Loss G: 0.1269
+2025-11-12 03:32:18,217 - INFO - Epoch 113/150 - Loss D: 1.8883, Loss G: 0.1263
+2025-11-12 03:35:37,325 - INFO - Epoch 114/150 - Loss D: 1.8892, Loss G: 0.1271
+2025-11-12 03:38:56,789 - INFO - Epoch 115/150 - Loss D: 1.8886, Loss G: 0.1247
+2025-11-12 03:42:16,001 - INFO - Epoch 116/150 - Loss D: 1.8907, Loss G: 0.1184
+2025-11-12 03:45:35,693 - INFO - Epoch 117/150 - Loss D: 1.8911, Loss G: 0.1266
+2025-11-12 03:48:55,596 - INFO - Epoch 118/150 - Loss D: 1.8927, Loss G: 0.1230
+2025-11-12 03:52:14,948 - INFO - Epoch 119/150 - Loss D: 1.8894, Loss G: 0.1245
+2025-11-12 03:55:34,215 - INFO - Epoch 120/150 - Loss D: 1.8950, Loss G: 0.1232
+2025-11-12 03:55:34,336 - INFO - Saved checkpoints and samples at epoch 120
+2025-11-12 03:58:53,730 - INFO - Epoch 121/150 - Loss D: 1.8910, Loss G: 0.1187
+2025-11-12 04:02:12,900 - INFO - Epoch 122/150 - Loss D: 1.8953, Loss G: 0.1180
+2025-11-12 04:05:33,122 - INFO - Epoch 123/150 - Loss D: 1.8918, Loss G: 0.1127
+2025-11-12 04:08:55,210 - INFO - Epoch 124/150 - Loss D: 1.8934, Loss G: 0.1219
+2025-11-12 04:12:14,524 - INFO - Epoch 125/150 - Loss D: 1.8945, Loss G: 0.1147
+2025-11-12 04:15:33,841 - INFO - Epoch 126/150 - Loss D: 1.8947, Loss G: 0.1169
+2025-11-12 04:18:52,841 - INFO - Epoch 127/150 - Loss D: 1.8971, Loss G: 0.1319
+2025-11-12 04:22:11,725 - INFO - Epoch 128/150 - Loss D: 1.8933, Loss G: 0.1202
+2025-11-12 04:25:30,837 - INFO - Epoch 129/150 - Loss D: 1.8973, Loss G: 0.1169
+2025-11-12 04:28:49,984 - INFO - Epoch 130/150 - Loss D: 1.8985, Loss G: 0.1157
+2025-11-12 04:28:50,106 - INFO - Saved checkpoints and samples at epoch 130
+2025-11-12 04:32:08,886 - INFO - Epoch 131/150 - Loss D: 1.8978, Loss G: 0.1147
+2025-11-12 04:35:27,786 - INFO - Epoch 132/150 - Loss D: 1.8950, Loss G: 0.1179
+2025-11-12 04:38:47,185 - INFO - Epoch 133/150 - Loss D: 1.8976, Loss G: 0.1247
+2025-11-12 04:42:06,062 - INFO - Epoch 134/150 - Loss D: 1.8967, Loss G: 0.1188
+2025-11-12 04:45:25,548 - INFO - Epoch 135/150 - Loss D: 1.8984, Loss G: 0.1161
+2025-11-12 04:48:44,546 - INFO - Epoch 136/150 - Loss D: 1.8967, Loss G: 0.1146
+2025-11-12 04:52:03,540 - INFO - Epoch 137/150 - Loss D: 1.8991, Loss G: 0.1109
+2025-11-12 04:55:22,846 - INFO - Epoch 138/150 - Loss D: 1.8988, Loss G: 0.1185
+2025-11-12 04:58:40,349 - INFO - Epoch 139/150 - Loss D: 1.9004, Loss G: 0.1113
+2025-11-12 05:02:00,274 - INFO - Epoch 140/150 - Loss D: 1.8968, Loss G: 0.1154
+2025-11-12 05:02:00,393 - INFO - Saved checkpoints and samples at epoch 140
+2025-11-12 05:05:19,427 - INFO - Epoch 141/150 - Loss D: 1.9000, Loss G: 0.1175
+2025-11-12 05:08:38,496 - INFO - Epoch 142/150 - Loss D: 1.9012, Loss G: 0.1063
+2025-11-12 05:11:57,499 - INFO - Epoch 143/150 - Loss D: 1.8968, Loss G: 0.1239
+2025-11-12 05:15:16,671 - INFO - Epoch 144/150 - Loss D: 1.9019, Loss G: 0.1113
+2025-11-12 05:18:35,518 - INFO - Epoch 145/150 - Loss D: 1.8997, Loss G: 0.1090
+2025-11-12 05:21:54,748 - INFO - Epoch 146/150 - Loss D: 1.9006, Loss G: 0.1080
+2025-11-12 05:25:10,712 - INFO - Epoch 147/150 - Loss D: 1.9004, Loss G: 0.1184
+2025-11-12 05:28:26,687 - INFO - Epoch 148/150 - Loss D: 1.9060, Loss G: 0.1022
+2025-11-12 05:31:42,892 - INFO - Epoch 149/150 - Loss D: 1.8998, Loss G: 0.1211
+2025-11-12 05:34:59,186 - INFO - Epoch 150/150 - Loss D: 1.9022, Loss G: 0.1136
+2025-11-12 05:34:59,304 - INFO - Saved checkpoints and samples at epoch 150
+2025-11-12 05:34:59,305 - INFO - Training complete! Checkpoints saved to runs_gan_snn
