@@ -9,14 +9,14 @@ from pathlib import Path
 from inference import load_caption_generator
 import time
 
-# Custom CSS for minimal, Google-like design
+# Custom CSS for minimal design with deep green background
 CUSTOM_CSS = """
-/* Clean, minimal design inspired by Google */
+/* Clean, minimal design with deep green monotone background */
 .gradio-container {
     font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif !important;
     max-width: 600px !important;
     margin: auto !important;
-    background: #ffffff !important;
+    background: #0f4c3a !important;
     padding: 0 !important;
 }
 
@@ -30,13 +30,13 @@ CUSTOM_CSS = """
     font-size: 3rem;
     font-weight: 300;
     margin: 0;
-    color: #202124;
+    color: #ffffff !important;
     letter-spacing: -0.5px;
 }
 
 .header-container p {
     font-size: 0.875rem;
-    color: #5f6368;
+    color: #e0f2e9 !important;
     margin-top: 0.5rem;
     font-weight: 400;
 }
@@ -51,48 +51,57 @@ CUSTOM_CSS = """
 
 /* Minimal image upload */
 .image-container {
-    border: none !important;
-    background: transparent !important;
-    border-radius: 0 !important;
-    padding: 0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 4px !important;
+    padding: 1rem !important;
     margin: 2rem 0 !important;
 }
 
 .image-container:hover {
-    background: transparent !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
 }
 
 /* Clean button */
 button {
-    background: #f8f9fa !important;
-    color: #202124 !important;
-    border: 1px solid #dadce0 !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
     border-radius: 4px !important;
     padding: 0.5rem 1.5rem !important;
     font-weight: 400 !important;
     font-size: 0.875rem !important;
-    transition: all 0.1s ease !important;
+    transition: all 0.2s ease !important;
     box-shadow: none !important;
     text-transform: none !important;
 }
 
 button:hover {
-    background: #f1f3f4 !important;
-    border-color: #d2d3d4 !important;
-    box-shadow: 0 1px 1px rgba(0,0,0,.1) !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* Output text - minimal, centered */
+/* Output text - minimal, centered, HIGHLY VISIBLE */
 .output-class {
     background: transparent !important;
     border: none !important;
     padding: 2rem 0 !important;
-    font-size: 1.25rem !important;
-    font-weight: 300 !important;
-    color: #202124 !important;
+    font-size: 1.5rem !important;
+    font-weight: 400 !important;
+    color: #ffffff !important;
     text-align: center !important;
     min-height: 60px !important;
-    letter-spacing: 0.25px !important;
+    letter-spacing: 0.5px !important;
+    line-height: 1.6 !important;
+}
+
+/* Output textbox styling */
+textarea.output-class,
+input.output-class {
+    color: #ffffff !important;
+    background: transparent !important;
 }
 
 /* Hide labels */
@@ -108,24 +117,25 @@ label {
 /* Clean footer */
 .footer {
     text-align: center;
-    color: #5f6368;
+    color: #c5e3d6 !important;
     margin-top: 4rem;
     font-size: 0.75rem;
     padding: 1rem 0 2rem 0;
 }
 
 .footer a {
-    color: #5f6368;
+    color: #e0f2e9 !important;
     text-decoration: none;
 }
 
 .footer a:hover {
     text-decoration: underline;
+    color: #ffffff !important;
 }
 
 /* Thinking indicator */
 .thinking {
-    color: #5f6368;
+    color: #c5e3d6 !important;
     font-style: italic;
     font-weight: 300;
 }
@@ -139,42 +149,21 @@ footer {
     display: none !important;
 }
 
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-    .gradio-container {
-        background: #202124 !important;
-    }
+/* Override any Gradio default text colors */
+* {
+    color: inherit;
+}
 
-    .header-container h1 {
-        color: #e8eaed;
-    }
+/* Ensure all text in containers is white */
+.gradio-container * {
+    color: #ffffff;
+}
 
-    .header-container p {
-        color: #9aa0a6;
-    }
-
-    button {
-        background: #303134 !important;
-        color: #e8eaed !important;
-        border-color: #5f6368 !important;
-    }
-
-    button:hover {
-        background: #3c4043 !important;
-        border-color: #9aa0a6 !important;
-    }
-
-    .output-class {
-        color: #e8eaed !important;
-    }
-
-    .footer {
-        color: #9aa0a6;
-    }
-
-    .footer a {
-        color: #9aa0a6;
-    }
+/* Fix textbox specifically */
+.gradio-container textarea,
+.gradio-container input[type="text"] {
+    color: #ffffff !important;
+    caret-color: #ffffff !important;
 }
 """
 
