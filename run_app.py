@@ -8,15 +8,18 @@ import sys
 import os
 from pathlib import Path
 
-# Add app directory to path
-app_dir = Path(__file__).parent / "app"
-sys.path.insert(0, str(app_dir))
+# Get project root directory
+project_root = Path(__file__).parent.absolute()
 
-# Change to app directory
-os.chdir(app_dir)
+# Add project root to path for imports
+sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(project_root / "app"))
+
+# Ensure we're in the project root directory
+os.chdir(project_root)
 
 # Import and run the app
-from app import create_interface
+from app.app import create_interface
 
 if __name__ == "__main__":
     print("🎨 Starting Jamel's BetaBox Describinator...")
