@@ -97,11 +97,27 @@ button:hover {
     line-height: 1.6 !important;
 }
 
-/* Output textbox styling */
+/* Output textbox styling - VERY AGGRESSIVE */
+.output-class textarea,
+.output-class input,
 textarea.output-class,
-input.output-class {
+input.output-class,
+.output-class textarea.scroll-hide,
+.output-class input[type="text"],
+div.output-class textarea,
+div.output-class input {
     color: #ffffff !important;
     background: transparent !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Target Gradio's internal textbox structure */
+.gradio-container .output-class textarea,
+.gradio-container .output-class input,
+.gr-textbox.output-class textarea,
+.gr-textbox.output-class input {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }
 
 /* Hide labels */
@@ -156,14 +172,36 @@ footer {
 
 /* Ensure all text in containers is white */
 .gradio-container * {
-    color: #ffffff;
+    color: #ffffff !important;
 }
 
-/* Fix textbox specifically */
+/* Fix textbox specifically - MAXIMUM OVERRIDE */
 .gradio-container textarea,
-.gradio-container input[type="text"] {
+.gradio-container input[type="text"],
+textarea,
+input[type="text"],
+.gr-textbox textarea,
+.gr-textbox input,
+.gr-box textarea,
+.gr-box input {
     color: #ffffff !important;
     caret-color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Additional fallback for any text element */
+p, span, div, textarea, input {
+    color: #ffffff !important;
+}
+
+/* Specific targeting for caption output */
+#caption-output,
+#caption-output textarea,
+#caption-output input,
+#caption-output * {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    background: transparent !important;
 }
 """
 
@@ -238,7 +276,27 @@ def generate_caption_stream(image):
 def create_interface():
     """Create the minimal Gradio interface."""
 
-    with gr.Blocks(css=CUSTOM_CSS, title="BetaBox Describinator") as demo:
+    with gr.Blocks(css=CUSTOM_CSS, title="BetaBox Describinator", js="""
+        function() {
+            // Force white text color on all textareas and inputs
+            const style = document.createElement('style');
+            style.textContent = `
+                textarea, input {
+                    color: #ffffff !important;
+                    -webkit-text-fill-color: #ffffff !important;
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Also set inline styles
+            setInterval(() => {
+                document.querySelectorAll('textarea, input').forEach(el => {
+                    el.style.color = '#ffffff';
+                    el.style.webkitTextFillColor = '#ffffff';
+                });
+            }, 100);
+        }
+    """) as demo:
         # Minimal header
         gr.HTML("""
             <div class="header-container">
@@ -258,9 +316,12 @@ def create_interface():
         caption_output = gr.Textbox(
             show_label=False,
             placeholder="",
+            value="Ready to describe your image",
             lines=2,
             elem_classes=["output-class"],
-            interactive=False
+            elem_id="caption-output",
+            interactive=False,
+            container=False
         )
 
         # Submit button
