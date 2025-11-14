@@ -40,21 +40,27 @@ class CaptionGenerator:
         print(f"Loading checkpoint from {checkpoint_path}...")
         self.checkpoint = torch.load(checkpoint_path, map_location=self.device)
 
-        # Load config
-        config_path = Path(checkpoint_path).parent / "config.json"
-        if config_path.exists():
-            with open(config_path, 'r') as f:
-                self.config = json.load(f)
+        # Load config from checkpoint args or external config.json
+        if "args" in self.checkpoint:
+            self.config = self.checkpoint["args"]
+            print("Loaded config from checkpoint")
         else:
-            # Fallback config if not available
-            self.config = {
-                "encoder_type": "hybrid",
-                "use_attention": True,
-                "feat_dim": 256,
-                "ndf": 64,
-                "vocab_size": 112,
-                "max_len": 8
-            }
+            config_path = Path(checkpoint_path).parent / "config.json"
+            if config_path.exists():
+                with open(config_path, 'r') as f:
+                    self.config = json.load(f)
+                print("Loaded config from config.json")
+            else:
+                # Fallback config if not available
+                self.config = {
+                    "encoder_type": "hybrid",
+                    "use_attention": True,
+                    "feat_dim": 256,
+                    "ndf": 64,
+                    "vocab_size": 112,
+                    "max_len": 8
+                }
+                print("Using fallback config")
 
         # Build vocabulary
         self._build_vocab()
@@ -76,8 +82,14 @@ class CaptionGenerator:
         """Build vocabulary from checkpoint or create default vocab."""
         if "vocab" in self.checkpoint:
             vocab = self.checkpoint["vocab"]
-            self.stoi = vocab.get("stoi", {})
-            self.itos = vocab.get("itos", {})
+            # Handle both tuple format (stoi, itos) and dict format
+            if isinstance(vocab, tuple):
+                self.stoi, self.itos = vocab
+            elif isinstance(vocab, dict):
+                self.stoi = vocab.get("stoi", {})
+                self.itos = vocab.get("itos", {})
+            else:
+                raise ValueError(f"Unexpected vocab format: {type(vocab)}")
         else:
             # Minimal default vocab (will be loaded from checkpoint in practice)
             self.stoi = {"<pad>": 0, "<bos>": 1, "<eos>": 2}

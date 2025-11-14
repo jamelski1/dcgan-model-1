@@ -19,7 +19,11 @@ sys.path.insert(0, str(project_root / "app"))
 os.chdir(project_root)
 
 # Import and run the app
-from app.app import create_interface
+import importlib.util
+spec = importlib.util.spec_from_file_location("app", project_root / "app" / "app.py")
+app_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(app_module)
+create_interface = app_module.create_interface
 
 if __name__ == "__main__":
     print("🎨 Starting Jamel's BetaBox Describinator...")
