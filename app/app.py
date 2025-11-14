@@ -235,15 +235,24 @@ def generate_caption_stream(image):
         Partial caption strings for streaming effect
     """
     if image is None:
-        yield "Upload an image"
+        yield ""
         return
 
     try:
         if model_loaded:
             # Use actual model
             from PIL import Image
-            if not isinstance(image, Image.Image):
-                image = Image.fromarray(image)
+            import numpy as np
+
+            # Convert to PIL Image if needed
+            if isinstance(image, np.ndarray):
+                image = Image.fromarray(image.astype('uint8'))
+            elif isinstance(image, str):
+                # If it's a file path, open it
+                image = Image.open(image)
+            elif not isinstance(image, Image.Image):
+                yield "Error: Invalid image format"
+                return
 
             # Show thinking state
             yield "thinking..."
@@ -262,13 +271,15 @@ def generate_caption_stream(image):
             # Demo mode
             yield "thinking..."
             time.sleep(0.3)
-            demo_text = "a colorful scene"
+            demo_text = "a colorful scene with beautiful colors"
             result = ""
             for char in demo_text:
                 result += char
                 yield result
                 time.sleep(0.05)
 
+    except FileNotFoundError as e:
+        yield f"Error: Could not load image file. Please try again."
     except Exception as e:
         yield f"Error: {str(e)}"
 
@@ -307,7 +318,7 @@ def create_interface():
 
         # Image input
         image_input = gr.Image(
-            type="pil",
+            type="filepath",
             elem_classes=["image-container"],
             show_label=False
         )
@@ -315,8 +326,8 @@ def create_interface():
         # Caption output (streaming)
         caption_output = gr.Textbox(
             show_label=False,
-            placeholder="",
-            value="Ready to describe your image",
+            placeholder="Upload an image and click 'Describe'",
+            value="",
             lines=2,
             elem_classes=["output-class"],
             elem_id="caption-output",
@@ -336,15 +347,8 @@ def create_interface():
             </div>
         """)
 
-        # Connect streaming function
+        # Connect streaming function - ONLY on button click
         submit_btn.click(
-            fn=generate_caption_stream,
-            inputs=image_input,
-            outputs=caption_output
-        )
-
-        # Also trigger on image upload
-        image_input.change(
             fn=generate_caption_stream,
             inputs=image_input,
             outputs=caption_output
