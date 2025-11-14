@@ -9,8 +9,7 @@ already present. Add your model download URLs below.
 import os
 import sys
 from pathlib import Path
-import urllib.request
-import shutil
+import requests
 
 # Configuration
 # URLs can be set via environment variables (MODEL_URL, DCGAN_URL) or hardcoded below
@@ -36,17 +35,33 @@ def download_file(url: str, destination: str, description: str):
     Path(destination).parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        # Download with progress
-        with urllib.request.urlopen(url) as response:
-            total_size = int(response.headers.get('content-length', 0))
-            with open(destination, 'wb') as f:
-                shutil.copyfileobj(response, f)
+        # Download with streaming and progress
+        response = requests.get(url, stream=True, allow_redirects=True, timeout=300)
+        response.raise_for_status()
 
+        total_size = int(response.headers.get('content-length', 0))
+
+        # Write to file in chunks
+        downloaded = 0
+        chunk_size = 8192
+        with open(destination, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if total_size > 0:
+                        progress = (downloaded / total_size) * 100
+                        print(f"\r   Progress: {progress:.1f}% ({downloaded / 1024 / 1024:.1f} MB)", end='', flush=True)
+
+        print()  # New line after progress
         file_size = os.path.getsize(destination)
         print(f"   ✓ Downloaded {file_size / 1024 / 1024:.1f} MB")
         return True
+    except requests.exceptions.RequestException as e:
+        print(f"\n   ✗ Failed: {e}")
+        return False
     except Exception as e:
-        print(f"   ✗ Failed: {e}")
+        print(f"\n   ✗ Unexpected error: {e}")
         return False
 
 
@@ -55,6 +70,16 @@ def setup_models():
     print("=" * 60)
     print("🎨 Jamel's BetaBox Describinator - Model Setup")
     print("=" * 60)
+    print()
+
+    # Debug: Print environment variables
+    print("📋 Environment Variables:")
+    print(f"   MODEL_URL: {'✓ Set' if os.environ.get('MODEL_URL') else '✗ Not set'}")
+    print(f"   DCGAN_URL: {'✓ Set' if os.environ.get('DCGAN_URL') else '✗ Not set'}")
+    if os.environ.get('MODEL_URL'):
+        print(f"   MODEL_URL value: {os.environ.get('MODEL_URL')[:50]}...")
+    if os.environ.get('DCGAN_URL'):
+        print(f"   DCGAN_URL value: {os.environ.get('DCGAN_URL')[:50]}...")
     print()
 
     all_present = True
