@@ -121,48 +121,8 @@ def load_model(ckpt_path: str, device: str, encoder_type_override: str = None, d
     has_enc = "enc" in ckpt
     has_enc_disc = "enc_disc" in ckpt
 
-    if has_enc_disc or encoder_type in ("dcgan", "dcgan_sn"):
-        # DCGAN encoder (with or without spectral norm)
-        use_spectral_norm = (encoder_type == "dcgan_sn")
-        discriminator = Discriminator(ndf=ndf, use_spectral_norm=use_spectral_norm)
-
-        if use_attention:
-            # Spatial encoder for attention mechanism
-            encoder = SpatialEncoder(
-                encoder=DiscriminatorEncoder(
-                    discriminator=discriminator,
-                    feat_dim=feat_dim,
-                    ndf=ndf
-                ),
-                feat_dim=feat_dim,
-                ndf=ndf
-            ).to(device)
-        else:
-            # Standard global pooling encoder
-            encoder = DiscriminatorEncoder(
-                discriminator=discriminator,
-                feat_dim=feat_dim,
-                ndf=ndf
-            ).to(device)
-
-        enc_state = ckpt.get("enc_disc", ckpt.get("enc"))
-        if enc_state is None:
-            raise KeyError("Checkpoint missing both 'enc' and 'enc_disc' keys")
-        # Use strict=False for old checkpoints (enc_disc) to handle bias parameter differences
-        strict = not has_enc_disc
-        encoder.load_state_dict(enc_state, strict=strict)
-        if not strict:
-            print("Note: Loaded with strict=False to handle old checkpoint format")
-        encoder_desc = f"DCGAN {'spatial ' if use_attention else ''}encoder ({'SN' if use_spectral_norm else 'BN'})"
-        print(f"Loaded {encoder_desc}")
-    elif has_enc or encoder_type == "cnn":
-        # Baseline CNN encoder
-        if use_attention:
-            raise ValueError("Attention mechanism not supported with CNN encoder")
-        encoder = EncoderCNN(feat_dim=feat_dim).to(device)
-        encoder.load_state_dict(ckpt["enc"])
-        print("Loaded baseline CNN encoder")
-    elif encoder_type == "hybrid":
+    # Check encoder_type first (explicit override takes priority)
+    if encoder_type == "hybrid":
         # Hybrid encoder: Frozen DCGAN + ResNet18
         if not use_attention:
             raise ValueError("Hybrid encoder requires attention mechanism")
@@ -204,6 +164,47 @@ def load_model(ckpt_path: str, device: str, encoder_type_override: str = None, d
             raise KeyError("Checkpoint missing 'enc' key")
         encoder.load_state_dict(enc_state, strict=False)
         print(f"Loaded HybridEncoder (DCGAN {feat_dim}ch + ResNet18 512ch = 768ch)")
+    elif has_enc_disc or encoder_type in ("dcgan", "dcgan_sn"):
+        # DCGAN encoder (with or without spectral norm)
+        use_spectral_norm = (encoder_type == "dcgan_sn")
+        discriminator = Discriminator(ndf=ndf, use_spectral_norm=use_spectral_norm)
+
+        if use_attention:
+            # Spatial encoder for attention mechanism
+            encoder = SpatialEncoder(
+                encoder=DiscriminatorEncoder(
+                    discriminator=discriminator,
+                    feat_dim=feat_dim,
+                    ndf=ndf
+                ),
+                feat_dim=feat_dim,
+                ndf=ndf
+            ).to(device)
+        else:
+            # Standard global pooling encoder
+            encoder = DiscriminatorEncoder(
+                discriminator=discriminator,
+                feat_dim=feat_dim,
+                ndf=ndf
+            ).to(device)
+
+        enc_state = ckpt.get("enc_disc", ckpt.get("enc"))
+        if enc_state is None:
+            raise KeyError("Checkpoint missing both 'enc' and 'enc_disc' keys")
+        # Use strict=False for old checkpoints (enc_disc) to handle bias parameter differences
+        strict = not has_enc_disc
+        encoder.load_state_dict(enc_state, strict=strict)
+        if not strict:
+            print("Note: Loaded with strict=False to handle old checkpoint format")
+        encoder_desc = f"DCGAN {'spatial ' if use_attention else ''}encoder ({'SN' if use_spectral_norm else 'BN'})"
+        print(f"Loaded {encoder_desc}")
+    elif has_enc or encoder_type == "cnn":
+        # Baseline CNN encoder
+        if use_attention:
+            raise ValueError("Attention mechanism not supported with CNN encoder")
+        encoder = EncoderCNN(feat_dim=feat_dim).to(device)
+        encoder.load_state_dict(ckpt["enc"])
+        print("Loaded baseline CNN encoder")
     else:
         raise ValueError("Cannot determine encoder type from checkpoint")
 
