@@ -197,7 +197,13 @@ class CaptionGenerator:
         """
         words = []
         for idx in token_ids.cpu().numpy():
-            word = self.itos.get(int(idx), "<unk>")
+            idx_int = int(idx)
+            # Handle both list and dict itos formats
+            if isinstance(self.itos, dict):
+                word = self.itos.get(idx_int, "<unk>")
+            else:  # List format
+                word = self.itos[idx_int] if idx_int < len(self.itos) else "<unk>"
+
             if word == "<eos>":
                 break
             if word not in ["<bos>", "<pad>"]:
