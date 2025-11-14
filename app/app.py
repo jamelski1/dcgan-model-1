@@ -1,134 +1,186 @@
 """
 Jamel's BetaBox Describinator
-A sleek, minimal web UI for CIFAR-100 image captioning.
+A minimal web UI for CIFAR-100 image captioning.
 """
 
 import gradio as gr
 import torch
 from pathlib import Path
 from inference import load_caption_generator
+import time
 
-# Custom CSS for sleek, minimal design
+# Custom CSS for minimal, Google-like design
 CUSTOM_CSS = """
-/* Main container styling */
+/* Clean, minimal design inspired by Google */
 .gradio-container {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-    max-width: 900px !important;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif !important;
+    max-width: 600px !important;
     margin: auto !important;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    padding: 2rem !important;
+    background: #ffffff !important;
+    padding: 0 !important;
 }
 
-/* Header styling */
+/* Minimal header */
 .header-container {
     text-align: center;
-    margin-bottom: 2rem;
-    color: white;
+    margin: 8rem 0 3rem 0;
 }
 
 .header-container h1 {
-    font-size: 2.5rem;
-    font-weight: 800;
-    margin-bottom: 0.5rem;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    font-size: 3rem;
+    font-weight: 300;
+    margin: 0;
+    color: #202124;
+    letter-spacing: -0.5px;
 }
 
 .header-container p {
-    font-size: 1.1rem;
-    opacity: 0.9;
-    font-weight: 300;
+    font-size: 0.875rem;
+    color: #5f6368;
+    margin-top: 0.5rem;
+    font-weight: 400;
 }
 
-/* Main content card */
+/* Remove all borders and boxes */
 #component-0 {
-    background: white !important;
-    border-radius: 20px !important;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
-    padding: 2rem !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
 }
 
-/* Image upload area */
+/* Minimal image upload */
 .image-container {
-    border: 3px dashed #667eea !important;
-    border-radius: 15px !important;
-    background: #f8f9ff !important;
-    transition: all 0.3s ease !important;
+    border: none !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 2rem 0 !important;
 }
 
 .image-container:hover {
-    border-color: #764ba2 !important;
-    background: #f0f2ff !important;
+    background: transparent !important;
 }
 
-/* Upload button styling */
+/* Clean button */
 button {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 10px !important;
-    padding: 0.75rem 2rem !important;
-    font-weight: 600 !important;
-    font-size: 1rem !important;
-    transition: all 0.3s ease !important;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+    background: #f8f9fa !important;
+    color: #202124 !important;
+    border: 1px solid #dadce0 !important;
+    border-radius: 4px !important;
+    padding: 0.5rem 1.5rem !important;
+    font-weight: 400 !important;
+    font-size: 0.875rem !important;
+    transition: all 0.1s ease !important;
+    box-shadow: none !important;
+    text-transform: none !important;
 }
 
 button:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
+    background: #f1f3f4 !important;
+    border-color: #d2d3d4 !important;
+    box-shadow: 0 1px 1px rgba(0,0,0,.1) !important;
 }
 
-/* Output text styling */
+/* Output text - minimal, centered */
 .output-class {
-    background: #f8f9ff !important;
-    border: 2px solid #667eea !important;
-    border-radius: 15px !important;
-    padding: 1.5rem !important;
-    font-size: 1.2rem !important;
-    font-weight: 500 !important;
-    color: #333 !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 2rem 0 !important;
+    font-size: 1.25rem !important;
+    font-weight: 300 !important;
+    color: #202124 !important;
     text-align: center !important;
-    min-height: 80px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    min-height: 60px !important;
+    letter-spacing: 0.25px !important;
 }
 
-/* Examples styling */
+/* Hide labels */
+label {
+    display: none !important;
+}
+
+/* Hide examples */
 .examples-container {
-    margin-top: 2rem !important;
-    padding-top: 2rem !important;
-    border-top: 2px solid #e0e0e0 !important;
+    display: none !important;
 }
 
-/* Footer styling */
+/* Clean footer */
 .footer {
     text-align: center;
-    color: white;
-    margin-top: 2rem;
-    font-size: 0.9rem;
-    opacity: 0.8;
+    color: #5f6368;
+    margin-top: 4rem;
+    font-size: 0.75rem;
+    padding: 1rem 0 2rem 0;
 }
 
-/* Loading animation */
-.loading {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(255,255,255,.3);
-    border-radius: 50%;
-    border-top-color: white;
-    animation: spin 1s ease-in-out infinite;
+.footer a {
+    color: #5f6368;
+    text-decoration: none;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
+.footer a:hover {
+    text-decoration: underline;
+}
+
+/* Thinking indicator */
+.thinking {
+    color: #5f6368;
+    font-style: italic;
+    font-weight: 300;
+}
+
+/* Hide Gradio branding */
+.contain {
+    max-width: 100% !important;
+}
+
+footer {
+    display: none !important;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    .gradio-container {
+        background: #202124 !important;
+    }
+
+    .header-container h1 {
+        color: #e8eaed;
+    }
+
+    .header-container p {
+        color: #9aa0a6;
+    }
+
+    button {
+        background: #303134 !important;
+        color: #e8eaed !important;
+        border-color: #5f6368 !important;
+    }
+
+    button:hover {
+        background: #3c4043 !important;
+        border-color: #9aa0a6 !important;
+    }
+
+    .output-class {
+        color: #e8eaed !important;
+    }
+
+    .footer {
+        color: #9aa0a6;
+    }
+
+    .footer a {
+        color: #9aa0a6;
+    }
 }
 """
 
 # Initialize model
-MODEL_PATH = "runs_hybrid/best.pt"  # Hybrid encoder checkpoint
-DCGAN_PATH = "runs_gan_sn/best_disc.pt"  # Frozen DCGAN discriminator
+MODEL_PATH = "runs_hybrid/best.pt"
+DCGAN_PATH = "runs_gan_sn/best_disc.pt"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 print(f"Using device: {DEVICE}")
@@ -137,26 +189,27 @@ print("Loading caption generator...")
 try:
     generator = load_caption_generator(MODEL_PATH, device=DEVICE)
     model_loaded = True
-    print("✓ Model loaded successfully!")
+    print("Model loaded successfully")
 except Exception as e:
-    print(f"⚠ Warning: Could not load model: {e}")
+    print(f"Warning: Could not load model: {e}")
     print("The app will run in demo mode with placeholder responses.")
     model_loaded = False
     generator = None
 
 
-def generate_caption(image):
+def generate_caption_stream(image):
     """
-    Generate caption for uploaded image.
+    Generate caption for uploaded image with streaming effect.
 
     Args:
         image: PIL Image or numpy array
 
-    Returns:
-        Caption string
+    Yields:
+        Partial caption strings for streaming effect
     """
     if image is None:
-        return "Please upload an image first! 📸"
+        yield "Upload an image"
+        return
 
     try:
         if model_loaded:
@@ -165,98 +218,84 @@ def generate_caption(image):
             if not isinstance(image, Image.Image):
                 image = Image.fromarray(image)
 
+            # Show thinking state
+            yield "thinking..."
+            time.sleep(0.3)
+
+            # Generate caption
             caption = generator.generate_caption(image)
-            return f"🎨 {caption.capitalize()}"
+
+            # Stream output character by character
+            result = ""
+            for char in caption:
+                result += char
+                yield result
+                time.sleep(0.05)  # Adjust speed here
         else:
-            # Demo mode placeholder
-            return "🎨 Demo mode: A colorful scene from CIFAR-100 dataset (model not loaded)"
+            # Demo mode
+            yield "thinking..."
+            time.sleep(0.3)
+            demo_text = "a colorful scene"
+            result = ""
+            for char in demo_text:
+                result += char
+                yield result
+                time.sleep(0.05)
 
     except Exception as e:
-        return f"❌ Error: {str(e)}"
+        yield f"Error: {str(e)}"
 
 
-# Create Gradio interface
 def create_interface():
-    """Create the Gradio interface."""
+    """Create the minimal Gradio interface."""
 
-    with gr.Blocks(css=CUSTOM_CSS, title="Jamel's BetaBox Describinator") as demo:
-        # Header
+    with gr.Blocks(css=CUSTOM_CSS, title="BetaBox Describinator") as demo:
+        # Minimal header
         gr.HTML("""
             <div class="header-container">
-                <h1>🎨 Jamel's BetaBox Describinator</h1>
-                <p>Upload an image and let AI describe what it sees</p>
-                <p style="font-size: 0.9rem; margin-top: 0.5rem;">
-                    Powered by Hybrid DCGAN + ResNet18 Encoder with Multi-Head Attention
-                </p>
-                <p style="font-size: 0.85rem; margin-top: 0.3rem; opacity: 0.85;">
-                    ⚡ 65.37% Label Accuracy on CIFAR-100
-                </p>
+                <h1>BetaBox Describinator</h1>
+                <p>Image captioning powered by AI</p>
             </div>
         """)
 
-        with gr.Row():
-            with gr.Column(scale=1):
-                # Image input
-                image_input = gr.Image(
-                    label="📤 Upload Image",
-                    type="pil",
-                    elem_classes=["image-container"]
-                )
-
-                # Submit button
-                submit_btn = gr.Button("🚀 Generate Caption", variant="primary")
-
-        with gr.Row():
-            with gr.Column():
-                # Caption output
-                caption_output = gr.Textbox(
-                    label="📝 Generated Caption",
-                    placeholder="Your caption will appear here...",
-                    lines=3,
-                    elem_classes=["output-class"]
-                )
-
-        # Examples section
-        gr.HTML("""
-            <div class="examples-container">
-                <h3 style="text-align: center; color: #667eea; margin-bottom: 1rem;">
-                    💡 Try Some Examples
-                </h3>
-            </div>
-        """)
-
-        examples = gr.Examples(
-            examples=[
-                # You can add example images here
-                # ["path/to/example1.jpg"],
-                # ["path/to/example2.jpg"],
-            ],
-            inputs=image_input,
-            outputs=caption_output,
-            fn=generate_caption,
-            cache_examples=False,
+        # Image input
+        image_input = gr.Image(
+            type="pil",
+            elem_classes=["image-container"],
+            show_label=False
         )
+
+        # Caption output (streaming)
+        caption_output = gr.Textbox(
+            show_label=False,
+            placeholder="",
+            lines=2,
+            elem_classes=["output-class"],
+            interactive=False
+        )
+
+        # Submit button
+        submit_btn = gr.Button("Describe", variant="secondary")
 
         # Footer
         gr.HTML("""
             <div class="footer">
-                <p>Built with ❤️ by Jamel | Trained on CIFAR-100 Dataset</p>
-                <p style="font-size: 0.8rem; margin-top: 0.5rem;">
-                    Model: Frozen DCGAN Discriminator + Trainable ResNet18 + Multi-Head Attention
-                </p>
+                <a href="https://huggingface.co/jamelski/jamels-betabox-describinator" target="_blank">Model</a>
+                •
+                Built by Jamel
             </div>
         """)
 
-        # Connect button to function
+        # Connect streaming function
         submit_btn.click(
-            fn=generate_caption,
+            fn=generate_caption_stream,
             inputs=image_input,
             outputs=caption_output
         )
 
         # Also trigger on image upload
         image_input.change(
-            fn=generate_caption,
+            fn=generate_caption_stream,
             inputs=image_input,
             outputs=caption_output
         )
@@ -270,8 +309,8 @@ if __name__ == "__main__":
 
     # Launch settings
     demo.launch(
-        server_name="0.0.0.0",  # Allow external connections
+        server_name="0.0.0.0",
         server_port=7860,
-        share=False,  # Set to True for temporary public link
+        share=False,
         show_error=True,
     )
