@@ -13,7 +13,7 @@ from pathlib import Path
 from huggingface_hub import HfApi, create_repo
 
 # Configuration
-REPO_NAME = "betabox-describinator"  # Change if you want a different name
+REPO_NAME = "jamels-betabox-describinator"
 USERNAME = None  # Will be auto-detected from token
 
 # Model files to upload
