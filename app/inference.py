@@ -14,10 +14,10 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from models.encoders import (
-    Discriminator, DiscriminatorEncoder, SpatialEncoder,
-    ResNet18Encoder, HybridEncoder
+    DiscriminatorEncoder, ResNet18Encoder, HybridEncoder
 )
-from models.attention import AttentionDecoderGRU
+from models.gan import Discriminator
+from models.attention import AttentionDecoderGRU, SpatialEncoder
 from models.decoders import DecoderGRU
 import json
 
