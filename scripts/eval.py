@@ -86,13 +86,15 @@ def rouge_l(ref_tokens: list, hyp_tokens: list) -> float:
     return (2 * prec * rec) / (prec + rec)
 
 
-def load_model(ckpt_path: str, device: str):
+def load_model(ckpt_path: str, device: str, encoder_type_override: str = None, dcgan_ckpt: str = None):
     """
     Load model from checkpoint.
 
     Args:
         ckpt_path: Path to checkpoint file
         device: Device to load model on
+        encoder_type_override: Override encoder type from checkpoint
+        dcgan_ckpt: Path to DCGAN discriminator checkpoint (for hybrid encoder)
 
     Returns:
         Tuple of (encoder, decoder, vocab, args_dict)
@@ -109,7 +111,7 @@ def load_model(ckpt_path: str, device: str):
     ndf = args_dict.get("ndf", 64)
     hid = args_dict.get("hid", 256)
     emb = args_dict.get("emb", 128)
-    encoder_type = args_dict.get("encoder_type", "cnn")
+    encoder_type = encoder_type_override or args_dict.get("encoder_type", "cnn")
     use_attention = args_dict.get("use_attention", False)
     num_heads = args_dict.get("num_heads", 8)
     dropout = args_dict.get("dropout", 0.1)
@@ -164,9 +166,16 @@ def load_model(ckpt_path: str, device: str):
         # Hybrid encoder: Frozen DCGAN + ResNet18
         if not use_attention:
             raise ValueError("Hybrid encoder requires attention mechanism")
+        if not dcgan_ckpt:
+            raise ValueError("Hybrid encoder requires --dcgan_ckpt for frozen DCGAN features")
+
+        # Load frozen DCGAN discriminator
+        print(f"Loading frozen DCGAN discriminator from {dcgan_ckpt}")
+        discriminator = Discriminator(ndf=ndf, use_spectral_norm=True)
+        dcgan_state = torch.load(dcgan_ckpt, map_location=device)
+        discriminator.load_state_dict(dcgan_state, strict=False)
 
         # Create DCGAN spatial encoder (frozen)
-        discriminator = Discriminator(ndf=ndf, use_spectral_norm=True)
         dcgan_spatial = SpatialEncoder(
             encoder=DiscriminatorEncoder(
                 discriminator=discriminator,
@@ -189,7 +198,7 @@ def load_model(ckpt_path: str, device: str):
             resnet_channels=512
         ).to(device)
 
-        # Load encoder state
+        # Load encoder state (this loads the ResNet18 weights)
         enc_state = ckpt.get("enc")
         if enc_state is None:
             raise KeyError("Checkpoint missing 'enc' key")
@@ -238,12 +247,16 @@ def main():
                         help="Maximum caption length")
     parser.add_argument("--data_root", type=str, default="./data",
                         help="Root directory for CIFAR-100 data")
+    parser.add_argument("--encoder_type", type=str, default=None,
+                        help="Override encoder type (cnn, dcgan, dcgan_sn, hybrid)")
+    parser.add_argument("--dcgan_ckpt", type=str, default=None,
+                        help="Path to DCGAN discriminator checkpoint (required for hybrid encoder)")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Load model
-    encoder, decoder, vocab, args_dict = load_model(args.ckpt, device)
+    encoder, decoder, vocab, args_dict = load_model(args.ckpt, device, args.encoder_type, args.dcgan_ckpt)
     stoi, itos = vocab
 
     # Load test set
