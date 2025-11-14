@@ -127,7 +127,8 @@ button:hover {
 """
 
 # Initialize model
-MODEL_PATH = "runs_hybrid/best_model.pt"  # Update this path to your best model
+MODEL_PATH = "runs_hybrid/best.pt"  # Hybrid encoder checkpoint
+DCGAN_PATH = "runs_gan_sn/best_disc.pt"  # Frozen DCGAN discriminator
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 print(f"Using device: {DEVICE}")
@@ -186,6 +187,9 @@ def create_interface():
                 <p>Upload an image and let AI describe what it sees</p>
                 <p style="font-size: 0.9rem; margin-top: 0.5rem;">
                     Powered by Hybrid DCGAN + ResNet18 Encoder with Multi-Head Attention
+                </p>
+                <p style="font-size: 0.85rem; margin-top: 0.3rem; opacity: 0.85;">
+                    ⚡ 65.37% Label Accuracy on CIFAR-100
                 </p>
             </div>
         """)
