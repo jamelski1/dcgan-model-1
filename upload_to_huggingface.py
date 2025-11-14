@@ -10,7 +10,7 @@ Usage:
 
 import os
 from pathlib import Path
-from huggingface_hub import HfApi, create_repo
+from huggingface_hub import HfApi, create_repo, hf_hub_url
 
 # Configuration
 REPO_NAME = "jamels-betabox-describinator"
@@ -85,8 +85,13 @@ def main():
     print()
     print("🔗 Your model URLs for Render environment variables:")
     print()
-    print(f"MODEL_URL={api.hf_hub_url(repo_id, 'best.pt', repo_type='model')}")
-    print(f"DCGAN_URL={api.hf_hub_url(repo_id, 'best_disc.pt', repo_type='model')}")
+
+    # Generate download URLs
+    model_url = f"https://huggingface.co/{repo_id}/resolve/main/best.pt"
+    dcgan_url = f"https://huggingface.co/{repo_id}/resolve/main/best_disc.pt"
+
+    print(f"MODEL_URL={model_url}")
+    print(f"DCGAN_URL={dcgan_url}")
     print()
     print("📋 Next Steps:")
     print("1. Copy the URLs above")
